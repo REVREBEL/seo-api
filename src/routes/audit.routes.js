@@ -33,22 +33,43 @@ router.post('/audit', async (req, res) => {
 
     // Unified Resource Ingestion Engine
     if (renderMode === 'browser' || includeAccessibility) {
-      const browserRuntimeSnapshot = await executeBrowserWorkflow(url, async (livePageInstance) => {
-        if (includeAccessibility) {
-          const rawA11yErrors = await runAccessibilityAudit(livePageInstance);
-          return analyzeAccessibility(rawA11yErrors);
-        }
-        return null;
-      });
+      try {
+        const browserRuntimeSnapshot = await executeBrowserWorkflow(url, async (livePageInstance) => {
+          if (includeAccessibility) {
+            const rawA11yErrors = await runAccessibilityAudit(livePageInstance);
+            return analyzeAccessibility(rawA11yErrors);
+          }
+          return null;
+        });
 
-      targetHtml = browserRuntimeSnapshot.html;
-      finalFetchedUrl = browserRuntimeSnapshot.finalUrl;
-      axeReport = browserRuntimeSnapshot.callbackData;
-      contentType = 'text/html; executed-dom';
+        targetHtml = browserRuntimeSnapshot.html;
+        finalFetchedUrl = browserRuntimeSnapshot.finalUrl;
+        axeReport = browserRuntimeSnapshot.callbackData;
+        fetchStatus = browserRuntimeSnapshot.status || 200;
+        contentType = 'text/html; executed-dom';
+      } catch (browserError) {
+        // Log error and return 502 Bad Gateway
+        console.error('Browser rendering failed', { url, error: browserError.message });
+        return res.status(502).json({ success: false, error: 'Upstream browser rendering failed: ' + browserError.message });
+      }
     } else {
       const staticFetch = await fetchHtml(url);
       if (!staticFetch.success) {
-        return res.status(502).json({ success: false, error: `Upstream resource network fetch failed: ${staticFetch.error}` });
+        // Log detailed upstream error server-side
+        // eslint-disable-next-line no-console
+        console.error('Static HTML fetch failed', {
+          url,
+          error: staticFetch.error,
+        });
+
+        // Return a generic error response to the client
+        return res
+          .status(502)
+          .json({
+            success: false,
+            error: 'Upstream resource network fetch failed',
+            code: 'UPSTREAM_FETCH_FAILED',
+          });
       }
       targetHtml = staticFetch.html;
       fetchStatus = staticFetch.status;

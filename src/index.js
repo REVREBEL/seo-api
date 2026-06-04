@@ -46,6 +46,13 @@ const server = app.listen(PORT, () => {
 // Graceful teardown protocol to catch system interrupts cleanly
 const gracefulShutdown = async () => {
   console.log('\nStopping system services gracefully...');
+  
+  // Force exit after 10 seconds to prevent hanging on active connections
+  setTimeout(() => {
+    console.error('Forcing shutdown due to timeout...');
+    process.exit(1);
+  }, 10000);
+
   server.close(async () => {
     await closeBrowser();
     console.log('Headless browser singletons liquidated. Server safely offline.');

@@ -29,31 +29,68 @@ async function getBrowser() {
   return browserInstance;
 }
 
+// Pre-defined responsive viewports
+const VIEWPORTS = {
+  desktop: { width: 1920, height: 1080 },
+  tablet: { width: 768, height: 1024 },
+  mobile: { width: 390, height: 844 } // iPhone 12/13/14
+};
+
 /**
  * Standard programmatic rendering for simple DOM retrieval requests.
+ * Preserves legacy contract: returns a rich object and does not throw on error.
  */
-export async function renderHtml(url) {
-  return executeBrowserWorkflow(url);
+export async function renderHtml(url, options = {}) {
+  try {
+    const { html, finalUrl, viewportSize } = await executeBrowserWorkflow(url, options);
+    return {
+      success: true,
+      url: finalUrl,
+      viewport: viewportSize,
+      html
+    };
+  } catch (error) {
+    return {
+      success: false,
+      url,
+      error: error.message,
+      html: null
+    };
+  }
 }
 
 /**
  * High-Performance Lifecycle Orchestration Wrapper.
  * Prevents endpoint resource leakage by handling creation, observation, and context disposal in an isolated block.
  * @param {string} url - Destination target.
+ * @param {Object|Function} [options={}] - Configuration options for viewport/user-agent, or the callback if options omitted.
  * @param {Function} [pageExecutionCallback=null] - Injected step to run tasks against the page before context teardown.
  */
-export async function executeBrowserWorkflow(url, pageExecutionCallback = null) {
+export async function executeBrowserWorkflow(url, options = {}, pageExecutionCallback = null) {
+  // Support legacy calling pattern where options is omitted and callback is passed as second argument
+  if (typeof options === 'function') {
+    pageExecutionCallback = options;
+    options = {};
+  }
+  
+  const { 
+    viewport = 'desktop', 
+    userAgent = 'Mozilla/5.0 REVREBEL-WebsiteHealthcheck/1.0 (+https://revrebel.io)' 
+  } = options;
+  
+  const viewportSize = VIEWPORTS[viewport] || VIEWPORTS.desktop;
+
   const browser = await getBrowser();
   const context = await browser.newContext({
-    viewport: { width: 1920, height: 1080 },
+    viewport: viewportSize,
     ignoreHTTPSErrors: true,
-    userAgent: 'Mozilla/5.0 REVREBEL-WebsiteHealthcheck/1.0 (+https://revrebel.io)'
+    userAgent
   });
   
-  const page = await context.newPage();
-
   try {
-    await page.goto(url, { waitUntil: 'networkidle', timeout: 30000 });
+    const page = await context.newPage();
+    const response = await page.goto(url, { waitUntil: 'networkidle', timeout: 30000 });
+    const status = response ? response.status() : 200;
     const html = await page.content();
     const finalUrl = page.url();
 
@@ -62,7 +99,7 @@ export async function executeBrowserWorkflow(url, pageExecutionCallback = null) 
       callbackData = await pageExecutionCallback(page);
     }
 
-    return { html, finalUrl, callbackData };
+    return { html, finalUrl, status, callbackData, viewportSize };
   } catch (error) {
     console.error(`[executeBrowserWorkflow] Navigation run error for ${url}:`, error.message);
     throw error;
