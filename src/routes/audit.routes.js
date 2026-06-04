@@ -22,14 +22,13 @@ router.post('/audit', async (req, res) => {
     return res.status(400).json({ success: false, error: 'Bad Request: Invalid or forbidden destination URL configuration.' });
   }
 
-  try {
-    let targetHtml = null;
-    let finalFetchedUrl = url;
-    let fetchStatus = 200;
-    let contentType = 'text/html';
-    let axeReport = null;
+  let targetHtml = null;
+  let finalFetchedUrl = url;
+  let fetchStatus = 200;
+  let contentType = 'text/html';
+  let axeReport = null;
 
-    const robotsParser = await fetchRobotsTxt(url);
+  const robotsParser = await fetchRobotsTxt(url);
 
     // Unified Resource Ingestion Engine
     if (renderMode === 'browser' || includeAccessibility) {
@@ -45,7 +44,7 @@ router.post('/audit', async (req, res) => {
         targetHtml = browserRuntimeSnapshot.html;
         finalFetchedUrl = browserRuntimeSnapshot.finalUrl;
         axeReport = browserRuntimeSnapshot.callbackData;
-        fetchStatus = browserRuntimeSnapshot.status || 200;
+        fetchStatus = browserRuntimeSnapshot.status || fetchStatus;
         contentType = 'text/html; executed-dom';
       } catch (browserError) {
         // Log error and return 502 Bad Gateway
@@ -105,11 +104,6 @@ router.post('/audit', async (req, res) => {
       accessibility: axeReport,
       scorecard
     });
-
-  } catch (error) {
-    console.error(`[Orchestration Failure Error Tracking]:`, error.message);
-    return res.status(500).json({ success: false, error: 'Internal server orchestration structure fault.' });
-  }
 });
 
 export default router;

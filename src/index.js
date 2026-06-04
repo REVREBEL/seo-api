@@ -38,6 +38,24 @@ app.get('/health', (req, res) => {
 // Authenticated analytical paths
 app.use('/api', requireApiKey, auditRouter);
 
+// Global Error Handler for Express 5 native async promise rejections
+app.use((err, req, res, next) => {
+  const isProduction = process.env.NODE_ENV === 'production';
+
+  if (isProduction) {
+    console.error(`[Orchestration Failure Error Tracking]:`, err && err.message ? err.message : err);
+  } else {
+    // Log richer diagnostic information in non-production environments
+    if (err && err.stack) {
+      console.error(`[Orchestration Failure Error Tracking]:`, err.stack);
+    } else {
+      console.error(`[Orchestration Failure Error Tracking]:`, err);
+    }
+  }
+
+  res.status(500).json({ success: false, error: 'Internal server orchestration structure fault.' });
+});
+
 // 2. Explicit listener variable assignment to prevent graceful shutdown crashes
 const server = app.listen(PORT, () => {
   console.log(`🚀 REVREBEL Secure Audit Core mounted on port ${PORT}`);
