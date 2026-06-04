@@ -38,25 +38,17 @@ const VIEWPORTS = {
 
 /**
  * Standard programmatic rendering for simple DOM retrieval requests.
- * Preserves legacy contract: returns a rich object and does not throw on error.
+ * Legacy wrapper: maps the workflow output to the original rich object contract and propagates errors.
  */
 export async function renderHtml(url, options = {}) {
-  try {
-    const { html, finalUrl, viewportSize } = await executeBrowserWorkflow(url, options);
-    return {
-      success: true,
-      url: finalUrl,
-      viewport: viewportSize,
-      html
-    };
-  } catch (error) {
-    return {
-      success: false,
-      url,
-      error: error.message,
-      html: null
-    };
-  }
+  const { html, finalUrl, viewportSize, status } = await executeBrowserWorkflow(url, options);
+  return {
+    success: true,
+    url: finalUrl,
+    viewport: viewportSize,
+    status,
+    html
+  };
 }
 
 /**
@@ -71,14 +63,32 @@ export async function executeBrowserWorkflow(url, options = {}, pageExecutionCal
   if (typeof options === 'function') {
     pageExecutionCallback = options;
     options = {};
+  } else if (!options || typeof options !== 'object') {
+    options = {};
   }
   
   const { 
+    userAgent = 'Mozilla/5.0 REVREBEL-WebsiteHealthcheck/1.0 (+https://revrebel.io)' 
+  } = options;
+
+  const hasCustomViewport =
+    viewport &&
+    typeof viewport === 'object' &&
+    typeof viewport.width === 'number' &&
+    typeof viewport.height === 'number' &&
+    viewport.width > 0 &&
+    viewport.height > 0;
+
+  const viewportSize = hasCustomViewport
+    ? viewport
+    : VIEWPORTS[viewport] || VIEWPORTS.desktop;
     viewport = 'desktop', 
     userAgent = 'Mozilla/5.0 REVREBEL-WebsiteHealthcheck/1.0 (+https://revrebel.io)' 
   } = options;
   
-  const viewportSize = VIEWPORTS[viewport] || VIEWPORTS.desktop;
+  const viewportSize = (viewport && typeof viewport === 'object' && viewport.width && viewport.height)
+    ? viewport
+    : VIEWPORTS[viewport] || VIEWPORTS.desktop;
 
   const browser = await getBrowser();
   const context = await browser.newContext({
@@ -90,7 +100,7 @@ export async function executeBrowserWorkflow(url, options = {}, pageExecutionCal
   try {
     const page = await context.newPage();
     const response = await page.goto(url, { waitUntil: 'networkidle', timeout: 30000 });
-    const status = response ? response.status() : 200;
+    const status = response?.status();
     const html = await page.content();
     const finalUrl = page.url();
 
