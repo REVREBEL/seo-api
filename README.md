@@ -27,7 +27,7 @@ This API securely ingests web pages either via a static HTML fetch or a headless
    ```
    NODE_ENV=development
    PORT=3000
-   REVREBEL_API_KEY=rebel-default-development-key
+   REVREBEL_API_KEY=<YOUR_API_KEY>
    ```
 
 ## Local Run
