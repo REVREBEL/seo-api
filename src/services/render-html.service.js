@@ -68,6 +68,20 @@ export async function executeBrowserWorkflow(url, options = {}, pageExecutionCal
   }
   
   const { 
+    userAgent = 'Mozilla/5.0 REVREBEL-WebsiteHealthcheck/1.0 (+https://revrebel.io)' 
+  } = options;
+
+  const hasCustomViewport =
+    viewport &&
+    typeof viewport === 'object' &&
+    typeof viewport.width === 'number' &&
+    typeof viewport.height === 'number' &&
+    viewport.width > 0 &&
+    viewport.height > 0;
+
+  const viewportSize = hasCustomViewport
+    ? viewport
+    : VIEWPORTS[viewport] || VIEWPORTS.desktop;
     viewport = 'desktop', 
     userAgent = 'Mozilla/5.0 REVREBEL-WebsiteHealthcheck/1.0 (+https://revrebel.io)' 
   } = options;
