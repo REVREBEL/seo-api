@@ -44,7 +44,7 @@ router.post('/audit', async (req, res) => {
         targetHtml = browserRuntimeSnapshot.html;
         finalFetchedUrl = browserRuntimeSnapshot.finalUrl;
         axeReport = browserRuntimeSnapshot.callbackData;
-        fetchStatus = browserRuntimeSnapshot.status;
+        fetchStatus = browserRuntimeSnapshot.status || fetchStatus;
         contentType = 'text/html; executed-dom';
       } catch (browserError) {
         // Log error and return 502 Bad Gateway

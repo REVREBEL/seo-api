@@ -52,7 +52,7 @@ Performs a fast, static HTML analysis using standard network fetch without execu
 ```bash
 curl -X POST http://localhost:3000/api/audit \
   -H 'Content-Type: application/json' \
-  -H 'x-api-key: rebel-default-development-key' \
+  -H 'x-api-key: <YOUR_API_KEY>' \
   -d '{
     "url": "https://example.com",
     "renderMode": "static"
@@ -65,7 +65,7 @@ Performs a deep, headless Playwright analysis. Required for Single Page Applicat
 ```bash
 curl -X POST http://localhost:3000/api/audit \
   -H 'Content-Type: application/json' \
-  -H 'x-api-key: rebel-default-development-key' \
+  -H 'x-api-key: <YOUR_API_KEY>' \
   -d '{
     "url": "https://example.com",
     "renderMode": "browser",
