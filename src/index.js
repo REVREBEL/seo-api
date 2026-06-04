@@ -4,24 +4,32 @@
  */
 
 import express from 'express';
-import auditRoutes from './routes/audit.routes.js';
-import { closeBrowser } from './services/render-html.service.js';
+import helmet from 'helmet';
+import cors from 'cors';
+import dotenv from 'dotenv';
+import auditRouter from './routes/audit.routes.js';
+import { requireApiKey } from './utils/security.js';
+
+dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// Mount explicit perimeter defense wrappers
+app.use(helmet());
+app.use(cors({ origin: '*' })); // Restrict this to your front-end/agent proxies later
 app.use(express.json());
 
-// Mount our specialized endpoints
-app.use('/api', auditRoutes);
-
-// Health Check Endpoint for upstream proxy/gateway validation
+// Public Endpoint Checks
 app.get('/health', (req, res) => {
   res.json({ status: 'UP', timestamp: new Date().toISOString() });
 });
 
-const server = app.listen(PORT, () => {
-  console.log(`🚀 REVREBEL Modular Audit API running on port ${PORT}`);
+// Guarded Action Paths
+app.use('/api', requireApiKey, auditRouter);
+
+app.listen(PORT, () => {
+  console.log(`🚀 REVREBEL Secure Audit Core successfully mounted on port ${PORT}`);
 });
 
 // Graceful teardown to prevent orphan Chromium zombies on your Ubuntu server

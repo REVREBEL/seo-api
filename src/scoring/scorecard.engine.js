@@ -1,58 +1,57 @@
-/**
- * Scorecard & Recommendation Engine
- * Consolidates individual analyzer reports against rule profiles to compute weighted
- * performance tracking numbers and prioritize mitigation tasks.
- */
-
 import technicalSeoRules from './rules/technical-seo.rules.json' assert { type: 'json' };
 import hotelCommercialRules from './rules/hotel-commercial.rules.json' assert { type: 'json' };
 import performanceRules from './rules/performance.rules.json' assert { type: 'json' };
 import accessibilityRules from './rules/accessibility.rules.json' assert { type: 'json' };
 
-/**
- * Aggregates all analysis structures into a definitive commercial audit snapshot.
- */
 export function generateScorecard(technicalReport, commercialReport, performanceReport, accessibilityReport) {
   const issueBacklog = [];
-  
-  // 1. Process Category Scores
+  const validCategoryScores = [];
+
+  // 1. Always evaluate core matrices
   const techScore = _calculateCategoryScore(technicalSeoRules, {
-    isRobotsAllowed: technicalReport?.crawlProperties?.isRobotsAllowed ?? false,
-    isNoindexPresent: !(technicalReport?.indexability?.isNoindexPresent ?? false),
-    hasTitle: !!technicalReport?.metaEvaluation?.title,
-    isCanonicalValid: technicalReport?.metaEvaluation?.isCanonicalValid ?? false,
-    hasSingleH1: technicalReport?.structuralHealth?.h1Count === 1
+    isRobotsAllowed: technicalReport?.isRobotsAllowed ?? false,
+    isNoindexPresent: !(technicalReport?.isNoindexPresent ?? false),
+    hasTitle: !!technicalReport?.title,
+    isCanonicalValid: technicalReport?.isCanonicalValid ?? false,
+    hasSingleH1: technicalReport?.h1Count === 1
   }, issueBacklog);
+  validCategoryScores.push(techScore);
 
   const commercialScore = _calculateCategoryScore(hotelCommercialRules, {
-    bookingEngineDetected: commercialReport?.bookingEngineTrace?.detected ?? false,
+    bookingEngineDetected: commercialReport?.bookingEngineDetected ?? false,
     hospitalitySchemaDetected: commercialReport?.hospitalitySchemaDetected ?? false,
-    hasLanguageTags: commercialReport?.localizationStatus?.hasLanguageTags ?? false,
-    commercialMetadata: (commercialReport?.commercialMetadataScorecard?.hasOpenGraph && commercialReport?.commercialMetadataScorecard?.hasTwitterCard)
+    hasLanguageTags: commercialReport?.hasLanguageTags ?? false,
+    commercialMetadata: commercialReport?.hasSocialMetadata ?? false
   }, issueBacklog);
+  validCategoryScores.push(commercialScore);
 
-  const perfScore = _calculateCategoryScore(performanceRules, {
-    speedIndex: performanceReport?.metrics?.speedIndex?.passed ?? false,
-    largestContentfulPaint: performanceReport?.metrics?.largestContentfulPaint?.passed ?? false,
-    cumulativeLayoutShift: performanceReport?.metrics?.cumulativeLayoutShift?.passed ?? false,
-    totalBlockingTime: performanceReport?.metrics?.totalBlockingTime?.passed ?? false
-  }, issueBacklog);
+  // 2. Dynamically apply optional audit scores
+  let perfScore = null;
+  if (performanceReport && !performanceReport.error) {
+    perfScore = _calculateCategoryScore(performanceRules, {
+      speedIndex: performanceReport.metrics?.speedIndex?.passed ?? false,
+      largestContentfulPaint: performanceReport.metrics?.largestContentfulPaint?.passed ?? false,
+      cumulativeLayoutShift: performanceReport.metrics?.cumulativeLayoutShift?.passed ?? false,
+      totalBlockingTime: performanceReport.metrics?.totalBlockingTime?.passed ?? false
+    }, issueBacklog);
+    validCategoryScores.push(perfScore);
+  }
 
-  const a11yScore = _calculateCategoryScore(accessibilityRules, {
-    criticalViolations: (accessibilityReport?.violationSummary?.critical === 0),
-    seriousViolations: (accessibilityReport?.violationSummary?.serious === 0),
-    moderateViolations: (accessibilityReport?.violationSummary?.moderate === 0)
-  }, issueBacklog);
+  let a11yScore = null;
+  if (accessibilityReport && !accessibilityReport.error) {
+    a11yScore = _calculateCategoryScore(accessibilityRules, {
+      criticalViolations: (accessibilityReport.violationSummary?.critical === 0),
+      seriousViolations: (accessibilityReport.violationSummary?.serious === 0),
+      moderateViolations: (accessibilityReport.violationSummary?.moderate === 0)
+    }, issueBacklog);
+    validCategoryScores.push(a11yScore);
+  }
 
-  // 2. Compute Global Averaged Score
-  const globalScore = Math.round((techScore + commercialScore + perfScore + a11yScore) / 4);
-
-  // 3. Sort Recommendation Engine Backlog by impact priority
-  const priorityWeight = { CRITICAL: 4, HIGH: 3, MEDIUM: 2, LOW: 1 };
-  issueBacklog.sort((a, b) => priorityWeight[b.priority] - priorityWeight[a.priority]);
+  // 3. Compute dynamic mathematical score average 
+  const globalScore = Math.round(validCategoryScores.reduce((a, b) => a + b, 0) / validCategoryScores.length);
+  issueBacklog.sort((a, b) => (b.impactLoss || 0) - (a.impactLoss || 0));
 
   return {
-    generatedAt: new Date().toISOString(),
     globalCommercialScore: globalScore,
     categoryScores: {
       technicalSeo: techScore,
@@ -64,26 +63,14 @@ export function generateScorecard(technicalReport, commercialReport, performance
   };
 }
 
-function _calculateCategoryScore(ruleProfile, states, issueBacklog) {
-  let earnedPoints = 0;
-  let totalPoints = 0;
-
-  for (const [ruleKey, ruleConfig] of Object.entries(ruleProfile.rules)) {
-    totalPoints += ruleConfig.weight;
-    
-    if (states[ruleKey] === true) {
-      earnedPoints += ruleConfig.weight;
-    } else {
-      issueBacklog.push({
-        category: ruleProfile.category,
-        ruleId: ruleKey,
-        priority: ruleConfig.priority,
-        impactLoss: ruleConfig.weight,
-        recommendation: ruleConfig.errorMessage
-      });
+function _calculateCategoryScore(profile, states, backlog) {
+  let earned = 0, total = 0;
+  for (const [key, conf] of Object.entries(profile.rules)) {
+    total += conf.weight;
+    if (states[key]) earned += conf.weight;
+    else {
+      backlog.push({ category: profile.category, priority: conf.priority, impactLoss: conf.weight, recommendation: conf.errorMessage });
     }
   }
-
-  if (totalPoints === 0) return 0;
-  return Math.round((earnedPoints / totalPoints) * 100);
+  return total === 0 ? 0 : Math.round((earned / total) * 100);
 }
