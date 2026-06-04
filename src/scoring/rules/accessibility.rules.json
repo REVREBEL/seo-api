@@ -1,0 +1,20 @@
+{
+  "category": "Accessibility Compliance",
+  "rules": {
+    "criticalViolations": {
+      "weight": 50,
+      "errorMessage": "Critical Axe-Core accessibility violations discovered (fails basic WCAG compliance).",
+      "priority": "CRITICAL"
+    },
+    "seriousViolations": {
+      "weight": 35,
+      "errorMessage": "Serious accessibility barriers found that heavily degrade assistive technology usage.",
+      "priority": "HIGH"
+    },
+    "moderateViolations": {
+      "weight": 15,
+      "errorMessage": "Moderate accessibility compliance issues detected.",
+      "priority": "MEDIUM"
+    }
+  }
+}

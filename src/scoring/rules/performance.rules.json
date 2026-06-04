@@ -1,0 +1,25 @@
+{
+  "category": "Performance & Core Web Vitals",
+  "rules": {
+    "speedIndex": {
+      "weight": 30,
+      "errorMessage": "Speed Index indicates slow visual page loading progression.",
+      "priority": "HIGH"
+    },
+    "largestContentfulPaint": {
+      "weight": 30,
+      "errorMessage": "Largest Contentful Paint (LCP) exceeds acceptable Core Web Vitals thresholds.",
+      "priority": "HIGH"
+    },
+    "cumulativeLayoutShift": {
+      "weight": 20,
+      "errorMessage": "Cumulative Layout Shift (CLS) indicates poor visual stability during page render.",
+      "priority": "MEDIUM"
+    },
+    "totalBlockingTime": {
+      "weight": 20,
+      "errorMessage": "Total Blocking Time (TBT) flags severe main-thread JS execution delays.",
+      "priority": "MEDIUM"
+    }
+  }
+}

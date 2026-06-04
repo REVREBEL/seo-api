@@ -1,0 +1,30 @@
+{
+  "category": "Technical SEO",
+  "rules": {
+    "isRobotsAllowed": {
+      "weight": 35,
+      "errorMessage": "The page is blocked by robots.txt rules.",
+      "priority": "CRITICAL"
+    },
+    "isNoindexPresent": {
+      "weight": 30,
+      "errorMessage": "A 'noindex' directive was discovered in meta tags, blocking search indexation.",
+      "priority": "CRITICAL"
+    },
+    "hasTitle": {
+      "weight": 15,
+      "errorMessage": "The meta title tag is missing or empty.",
+      "priority": "HIGH"
+    },
+    "isCanonicalValid": {
+      "weight": 10,
+      "errorMessage": "The canonical URL is missing or does not match the current page URL.",
+      "priority": "MEDIUM"
+    },
+    "hasSingleH1": {
+      "weight": 10,
+      "errorMessage": "The page does not contain exactly one H1 tag.",
+      "priority": "LOW"
+    }
+  }
+}

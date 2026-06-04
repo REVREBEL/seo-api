@@ -1,0 +1,25 @@
+{
+  "category": "Hotel Commercial Readiness",
+  "rules": {
+    "bookingEngineDetected": {
+      "weight": 40,
+      "errorMessage": "No verified direct booking engine infrastructure or transaction path was found.",
+      "priority": "CRITICAL"
+    },
+    "hospitalitySchemaDetected": {
+      "weight": 30,
+      "errorMessage": "Essential structural hospitality schemas (Hotel, LodgingBusiness) are completely missing.",
+      "priority": "HIGH"
+    },
+    "hasLanguageTags": {
+      "weight": 15,
+      "errorMessage": "International localization meta properties are missing.",
+      "priority": "MEDIUM"
+    },
+    "commercialMetadata": {
+      "weight": 15,
+      "errorMessage": "OpenGraph or Twitter social metadata targets are missing, degrading ad and share performance.",
+      "priority": "LOW"
+    }
+  }
+}

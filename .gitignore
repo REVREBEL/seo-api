@@ -1,0 +1,27 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.*
+
+# Production Build Logs & Runtime states
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.playwright/
+
+# OS/IDEs
+.DS_Store
+.idea/
+.vscode/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.swp
+
+# Optional: Un-comment if you want to keep agent instructions out of source control
+# .agents/
+
+repo-cache/
