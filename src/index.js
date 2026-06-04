@@ -1,6 +1,6 @@
 /**
  * Core Application Server
- * Initializer for the Ubuntu microservice. Exposes hooks for Gemini tools.
+ * Initializer for the Ubuntu microservice environment.
  */
 
 import express from 'express';
@@ -9,35 +9,46 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import auditRouter from './routes/audit.routes.js';
 import { requireApiKey } from './utils/security.js';
+import { closeBrowser } from './services/render-html.service.js';
 
 dotenv.config();
+
+// 1. Production Fail-Closed Configuration Sentinel
+if (process.env.NODE_ENV === 'production' && !process.env.REVREBEL_API_KEY) {
+  console.error('❌ CRITICAL STARTUP ERROR: REVREBEL_API_KEY must be defined when running in production mode.');
+  process.exit(1);
+}
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Mount explicit perimeter defense wrappers
+// Perimeter Middleware Defenses
 app.use(helmet());
-app.use(cors({ origin: '*' })); // Restrict this to your front-end/agent proxies later
+app.use(cors({ origin: '*' }));
 app.use(express.json());
 
-// Public Endpoint Checks
+// Serve static elements (OpenAPI documentation assets)
+app.use(express.static('public'));
+
+// Unauthenticated baseline monitor
 app.get('/health', (req, res) => {
   res.json({ status: 'UP', timestamp: new Date().toISOString() });
 });
 
-// Guarded Action Paths
+// Authenticated analytical paths
 app.use('/api', requireApiKey, auditRouter);
 
-app.listen(PORT, () => {
-  console.log(`🚀 REVREBEL Secure Audit Core successfully mounted on port ${PORT}`);
+// 2. Explicit listener variable assignment to prevent graceful shutdown crashes
+const server = app.listen(PORT, () => {
+  console.log(`🚀 REVREBEL Secure Audit Core mounted on port ${PORT}`);
 });
 
-// Graceful teardown to prevent orphan Chromium zombies on your Ubuntu server
+// Graceful teardown protocol to catch system interrupts cleanly
 const gracefulShutdown = async () => {
-  console.log('\nShutting down gracefully...');
+  console.log('\nStopping system services gracefully...');
   server.close(async () => {
     await closeBrowser();
-    console.log('Headless browser singletons closed. Process terminated safely.');
+    console.log('Headless browser singletons liquidated. Server safely offline.');
     process.exit(0);
   });
 };

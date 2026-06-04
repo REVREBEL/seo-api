@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { validateUrlSecure } from '../utils/security.js';
 import { fetchHtml } from '../services/fetch-html.service.js';
-import { renderHtml, closeBrowser } from '../services/render-html.service.js';
+import { executeBrowserWorkflow } from '../services/render-html.service.js';
 import { fetchRobotsTxt } from '../services/robots.service.js';
 import { extractStructuredData } from '../services/structured-data.service.js';
 import { detectTechnologies } from '../services/technology-detection.service.js';
@@ -12,58 +12,53 @@ import { analyzeHotelCommercial } from '../analyzers/hotel-commercial.analyzer.j
 import { analyzePerformance } from '../analyzers/performance.analyzer.js';
 import { analyzeAccessibility } from '../analyzers/accessibility.analyzer.js';
 import { generateScorecard } from '../scoring/scorecard.engine.js';
-import { chromium } from 'playwright';
 
 const router = Router();
 
 router.post('/audit', async (req, res) => {
   const { url, renderMode = 'static', includePerformance = false, includeAccessibility = false } = req.body;
 
-  // 1. Strict Firewall Layer
   if (!url || !validateUrlSecure(url)) {
-    return res.status(400).json({ success: false, error: 'Bad Request: Invalid or non-permitted destination URL structure.' });
+    return res.status(400).json({ success: false, error: 'Bad Request: Invalid or forbidden destination URL configuration.' });
   }
 
   try {
     let targetHtml = null;
     let finalFetchedUrl = url;
-    let fetchStatus = null;
-    let contentType = '';
+    let fetchStatus = 200;
+    let contentType = 'text/html';
     let axeReport = null;
 
     const robotsParser = await fetchRobotsTxt(url);
 
-    // 2. Conditional Processing Engine
+    // Unified Resource Ingestion Engine
     if (renderMode === 'browser' || includeAccessibility) {
-      const browser = await chromium.launch({ headless: true, args: ['--no-sandbox', '--disable-dev-shm-usage'] });
-      const context = await browser.newContext({ ignoreHTTPSErrors: true });
-      const page = await context.newPage();
-      
-      await page.goto(url, { waitUntil: 'networkidle', timeout: 30000 });
-      targetHtml = await page.content();
-      finalFetchedUrl = page.url();
-      fetchStatus = 200;
-      contentType = 'text/html; executed-dom';
+      const browserRuntimeSnapshot = await executeBrowserWorkflow(url, async (livePageInstance) => {
+        if (includeAccessibility) {
+          const rawA11yErrors = await runAccessibilityAudit(livePageInstance);
+          return analyzeAccessibility(rawA11yErrors);
+        }
+        return null;
+      });
 
-      if (includeAccessibility) {
-        const rawA11y = await runAccessibilityAudit(page);
-        axeReport = analyzeAccessibility(rawA11y);
-      }
-      await context.close();
-      await browser.close();
+      targetHtml = browserRuntimeSnapshot.html;
+      finalFetchedUrl = browserRuntimeSnapshot.finalUrl;
+      axeReport = browserRuntimeSnapshot.callbackData;
+      contentType = 'text/html; executed-dom';
     } else {
       const staticFetch = await fetchHtml(url);
+      if (!staticFetch.success) {
+        return res.status(502).json({ success: false, error: `Upstream resource network fetch failed: ${staticFetch.error}` });
+      }
       targetHtml = staticFetch.html;
       fetchStatus = staticFetch.status;
       contentType = staticFetch.contentType;
       finalFetchedUrl = staticFetch.url;
     }
 
-    // 3. Extraction & Optimization Services
     const structuredData = extractStructuredData(targetHtml);
     const technologies = detectTechnologies(targetHtml, {});
 
-    // 4. Analysis Layer Execution
     const technicalSeo = analyzeTechnicalSeo(targetHtml, finalFetchedUrl, robotsParser);
     const hotelCommercial = analyzeHotelCommercial(structuredData, technologies);
     
@@ -73,10 +68,8 @@ router.post('/audit', async (req, res) => {
       performanceReport = analyzePerformance(rawLighthouse.performance);
     }
 
-    // 5. Scorecard Computation
     const scorecard = generateScorecard(technicalSeo, hotelCommercial, performanceReport, axeReport);
 
-    // 6. Return standard structured target output schema
     return res.json({
       success: true,
       targetUrl: url,
@@ -93,8 +86,8 @@ router.post('/audit', async (req, res) => {
     });
 
   } catch (error) {
-    console.error(`[Orchestration Failure]:`, error.message);
-    return res.status(500).json({ success: false, error: 'Internal system audit orchestration collapse.' });
+    console.error(`[Orchestration Failure Error Tracking]:`, error.message);
+    return res.status(500).json({ success: false, error: 'Internal server orchestration structure fault.' });
   }
 });
 

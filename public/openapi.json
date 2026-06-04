@@ -1,0 +1,161 @@
+{
+    "openapi": "3.0.0",
+    "info": {
+        "title": "REVREBEL Modular SEO & Hotel Commercial Audit API",
+        "version": "1.0.0",
+        "description": "Enterprise website evaluation pipeline optimizing technical SEO, hospitality telemetry schema mapping, and performance metrics tracking."
+    },
+    "servers": [
+        {
+            "url": "http://localhost:3000",
+            "description": "Local Run Environment Instance"
+        }
+    ],
+    "paths": {
+        "/health": {
+            "get": {
+                "summary": "Health Status Verification",
+                "responses": {
+                    "200": {
+                        "description": "Service online confirmation tracker",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "example": "UP"
+                                        },
+                                        "timestamp": {
+                                            "type": "string",
+                                            "format": "date-time"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/audit": {
+            "post": {
+                "summary": "Execute Commercial Site Diagnostic Evaluation",
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "required": [
+                                    "url"
+                                ],
+                                "properties": {
+                                    "url": {
+                                        "type": "string",
+                                        "format": "uri",
+                                        "example": "https://example.com"
+                                    },
+                                    "renderMode": {
+                                        "type": "string",
+                                        "enum": [
+                                            "static",
+                                            "browser"
+                                        ],
+                                        "default": "static"
+                                    },
+                                    "includePerformance": {
+                                        "type": "boolean",
+                                        "default": false
+                                    },
+                                    "includeAccessibility": {
+                                        "type": "boolean",
+                                        "default": false
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Complete Consolidated Structural Audit Payload Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "targetUrl": {
+                                            "type": "string"
+                                        },
+                                        "fetchedAt": {
+                                            "type": "string",
+                                            "format": "date-time"
+                                        },
+                                        "renderMode": {
+                                            "type": "string"
+                                        },
+                                        "rawFetch": {
+                                            "type": "object"
+                                        },
+                                        "structuredData": {
+                                            "type": "object"
+                                        },
+                                        "technologies": {
+                                            "type": "array",
+                                            "items": {
+                                                "type": "string"
+                                            }
+                                        },
+                                        "technicalSeo": {
+                                            "type": "object"
+                                        },
+                                        "hotelCommercial": {
+                                            "type": "object"
+                                        },
+                                        "performance": {
+                                            "type": "object",
+                                            "nullable": true
+                                        },
+                                        "accessibility": {
+                                            "type": "object",
+                                            "nullable": true
+                                        },
+                                        "scorecard": {
+                                            "type": "object"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Security layer token authentication violation"
+                    },
+                    "400": {
+                        "description": "SSRF or invalid URL specification rejection payload"
+                    }
+                }
+            }
+        }
+    },
+    "components": {
+        "securitySchemes": {
+            "ApiKeyAuth": {
+                "type": "apiKey",
+                "in": "header",
+                "name": "x-api-key"
+            }
+        }
+    }
+}
