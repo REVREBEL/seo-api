@@ -42,7 +42,8 @@ export function validateUrlSecure(urlString) {
  * Middleware to protect administrative routes via static token exchange.
  */
 export function requireApiKey(req, res, next) {
-  const targetKey = process.env.REVREBEL_API_KEY || (process.env.NODE_ENV === 'production' ? undefined : 'rebel-default-development-key');
+  const isProduction = process.env.NODE_ENV === 'production';
+  const targetKey = process.env.REVREBEL_API_KEY || (isProduction ? undefined : 'rebel-default-development-key');
 
   const inboundKey = req.headers['x-api-key'];
 
