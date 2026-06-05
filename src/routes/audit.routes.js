@@ -1,4 +1,8 @@
 import { Router } from 'express';
+import { readFileSync } from 'fs';
+import { resolve, dirname } from 'path';
+import { fileURLToPath } from 'url';
+
 import { validateUrlSecure } from '../utils/security.js';
 import { fetchHtml } from '../services/fetch-html.service.js';
 import { executeBrowserWorkflow } from '../services/render-html.service.js';
@@ -15,10 +19,11 @@ import { generateScorecard } from '../scoring/scorecard.engine.js';
 
 const router = Router();
 
-// Strict allowlist matching the OpenAPI spec enum for the viewport field.
-// Custom objects are intentionally excluded at the API surface to prevent
-// authenticated callers from forcing Playwright to allocate arbitrarily large pages.
-const ALLOWED_VIEWPORTS = new Set(['desktop', 'tablet', 'mobile']);
+// Dynamically source the single source of truth for viewports from the OpenAPI spec
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const openApiSpec = JSON.parse(readFileSync(resolve(__dirname, '../../../public/openapi.json'), 'utf8'));
+const ALLOWED_VIEWPORTS = new Set(openApiSpec.paths['/api/audit'].post.requestBody.content['application/json'].schema.properties.viewport.enum);
+
 
 router.post('/audit', async (req, res) => {
   const { url, renderMode = 'static', includePerformance = false, includeAccessibility = false, viewport = 'desktop' } = req.body;
@@ -59,8 +64,8 @@ router.post('/audit', async (req, res) => {
         fetchStatus = browserRuntimeSnapshot.status || fetchStatus;
         contentType = 'text/html; executed-dom';
       } catch (browserError) {
-        // Log error and return 502 Bad Gateway
-        console.error('Browser rendering failed', { url, error: browserError.message });
+        // Log rich error object and return 502 Bad Gateway
+        console.error('Browser rendering failed', { url, error: browserError.stack || browserError.message || String(browserError) });
         return res.status(502).json({ success: false, error: 'Upstream browser rendering failed: ' + browserError.message });
       }
     } else {
