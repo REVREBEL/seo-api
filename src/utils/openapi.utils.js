@@ -20,7 +20,7 @@ export function getAllowedViewports() {
 
     if (!viewports || !Array.isArray(viewports)) {
         console.error('Error: Could not find or validate viewports in OpenAPI spec. Using default.');
-        allowedViewports = DEFAULT_VIEWPORTS;
+        allowedViewports = new Set(DEFAULT_VIEWPORTS);
         return allowedViewports;
     }
 
@@ -29,7 +29,7 @@ export function getAllowedViewports() {
   } catch (error) {
     console.error('Failed to read or parse OpenAPI spec:', error);
     // Fallback to a default set of viewports if the spec is unavailable or malformed
-    allowedViewports = DEFAULT_VIEWPORTS;
+    allowedViewports = new Set(DEFAULT_VIEWPORTS);
     return allowedViewports;
   }
 }
