@@ -31,7 +31,7 @@ async function getBrowser() {
         ]
       });
     } catch (error) {
-      console.error('[getBrowser] Failed to launch Chromium:', error.message);
+      console.error('[getBrowser] Failed to launch Chromium:', error.stack ?? error);
       throw error;
     }
   }
