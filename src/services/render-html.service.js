@@ -7,88 +7,96 @@ import { chromium } from 'playwright';
 
 let browserInstance = null;
 
-async function getBrowser() {
-  if (!browserInstance) {
-    try {
-      browserInstance = await chromium.launch({
-        headless: true,
-        args: [
-          '--no-sandbox',
-          '--disable-setuid-sandbox',
-          '--disable-dev-shm-usage',
-          '--disable-gpu',
-          '--no-first-run',
-          '--no-zygote'
-        ]
-      });
-    } catch (error) {
-      console.error('[renderHtml] Failed to spawn internal browser instance:', error.message);
-      throw error;
-    }
-  }
-  return browserInstance;
-}
-
-// Pre-defined responsive viewports
 const VIEWPORTS = {
   desktop: { width: 1920, height: 1080 },
   tablet: { width: 768, height: 1024 },
-  mobile: { width: 390, height: 844 } // iPhone 12/13/14
+  mobile: { width: 390, height: 844 }
 };
 
-/**
- * Standard programmatic rendering for simple DOM retrieval requests.
- * Legacy wrapper: maps the workflow output to the original rich object contract and propagates errors.
- */
-export async function renderHtml(url, options = {}) {
-  const { html, finalUrl, viewportSize, status } = await executeBrowserWorkflow(url, options);
-  return {
-    success: true,
-    url: finalUrl,
-    viewport: viewportSize,
-    status,
-    html
-  };
+const DEFAULT_USER_AGENT =
+  'Mozilla/5.0 REVREBEL-WebsiteHealthcheck/1.0 (+https://revrebel.io)';
+
+async function getBrowser() {
+  if (!browserInstance) {
+    browserInstance = await chromium.launch({
+      headless: true,
+      args: [
+        '--no-sandbox',
+        '--disable-setuid-sandbox',
+        '--disable-dev-shm-usage',
+        '--disable-gpu',
+        '--no-first-run',
+        '--no-zygote'
+      ]
+    });
+  }
+
+  return browserInstance;
+}
+
+function resolveViewport(viewport = 'desktop') {
+  if (
+    viewport &&
+    typeof viewport === 'object' &&
+    Number.isFinite(viewport.width) &&
+    Number.isFinite(viewport.height) &&
+    viewport.width > 0 &&
+    viewport.height > 0
+  ) {
+    return viewport;
+  }
+
+  return VIEWPORTS[viewport] || VIEWPORTS.desktop;
 }
 
 /**
- * High-Performance Lifecycle Orchestration Wrapper.
- * Prevents endpoint resource leakage by handling creation, observation, and context disposal in an isolated block.
- * @param {string} url - Destination target.
- * @param {Object|Function} [options={}] - Configuration options for viewport/user-agent, or the callback if options omitted.
- * @param {Function} [pageExecutionCallback=null] - Injected step to run tasks against the page before context teardown.
+ * Standard programmatic rendering for simple DOM retrieval requests.
+ * @param {string} url - Target URL.
+ * @param {Object} [options={}] - Viewport and user-agent options.
  */
-export async function executeBrowserWorkflow(url, options = {}, pageExecutionCallback = null) {
-  // Support legacy calling pattern where options is omitted and callback is passed as second argument
+export async function renderHtml(url, options = {}) {
+  try {
+    const result = await executeBrowserWorkflow(url, options);
+
+    return {
+      success: true,
+      url: result.finalUrl,
+      viewport: result.viewportSize,
+      status: result.status,
+      html: result.html
+    };
+  } catch (error) {
+    return {
+      success: false,
+      error: error.message,
+      html: null
+    };
+  }
+}
+
+/**
+ * High-performance lifecycle orchestration wrapper.
+ * Supports two call signatures:
+ *   executeBrowserWorkflow(url, callback)
+ *   executeBrowserWorkflow(url, options, callback)
+ *
+ * @param {string} url - Destination target.
+ * @param {Object|Function} [options={}] - Config options or callback if options omitted.
+ * @param {Function} [pageExecutionCallback=null] - Optional page-level task to run before teardown.
+ */
+export async function executeBrowserWorkflow(
+  url,
+  options = {},
+  pageExecutionCallback = null
+) {
+  // Support legacy calling pattern: options omitted, callback passed as second argument
   if (typeof options === 'function') {
     pageExecutionCallback = options;
     options = {};
-  } else if (!options || typeof options !== 'object') {
-    options = {};
   }
-  
-  const { 
-    userAgent = 'Mozilla/5.0 REVREBEL-WebsiteHealthcheck/1.0 (+https://revrebel.io)' 
-  } = options;
 
-  const hasCustomViewport =
-    viewport &&
-    typeof viewport === 'object' &&
-    typeof viewport.width === 'number' &&
-    typeof viewport.height === 'number' &&
-    viewport.width > 0 &&
-    viewport.height > 0;
-
-  const viewportSize = hasCustomViewport
-    ? viewport
-    : VIEWPORTS[viewport] || VIEWPORTS.desktop;
-    viewport = 'desktop', 
-    userAgent = 'Mozilla/5.0 REVREBEL-WebsiteHealthcheck/1.0 (+https://revrebel.io)' 
-  } = options;
-  
-  const viewportSize = (viewport && typeof viewport === 'object' && viewport.width && viewport.height)
-    ? viewport
-    : VIEWPORTS[viewport] || VIEWPORTS.desktop;
+  const viewportSize = resolveViewport(options.viewport || 'desktop');
+  const userAgent = options.userAgent || DEFAULT_USER_AGENT;
 
   const browser = await getBrowser();
   const context = await browser.newContext({
@@ -96,25 +104,37 @@ export async function executeBrowserWorkflow(url, options = {}, pageExecutionCal
     ignoreHTTPSErrors: true,
     userAgent
   });
-  
+
   try {
     const page = await context.newPage();
-    const response = await page.goto(url, { waitUntil: 'networkidle', timeout: 30000 });
-    const status = response?.status();
+
+    const response = await page.goto(url, {
+      waitUntil: options.waitUntil || 'networkidle',
+      timeout: options.timeout || 30000
+    });
+
     const html = await page.content();
     const finalUrl = page.url();
+    const status = response?.status() || null;
 
     let callbackData = null;
+
     if (pageExecutionCallback) {
       callbackData = await pageExecutionCallback(page);
     }
 
-    return { html, finalUrl, status, callbackData, viewportSize };
+    return {
+      html,
+      finalUrl,
+      status,
+      callbackData,
+      viewportSize
+    };
   } catch (error) {
-    console.error(`[executeBrowserWorkflow] Navigation run error for ${url}:`, error.message);
+    console.error(`[executeBrowserWorkflow] Navigation error for ${url}:`, error.message);
     throw error;
   } finally {
-    // Structural isolation protection: context drops away, singleton browser process persists
+    // Context dropped per request; singleton browser process persists
     await context.close();
   }
 }
@@ -124,7 +144,7 @@ export async function closeBrowser() {
     try {
       await browserInstance.close();
     } catch (error) {
-      console.error('[renderHtml] Teardown exception tracker:', error.message);
+      console.error('[closeBrowser] Teardown error:', error.message);
     } finally {
       browserInstance = null;
     }

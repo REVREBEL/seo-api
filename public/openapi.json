@@ -41,6 +41,7 @@
         },
         "/api/audit": {
             "post": {
+                "operationId": "auditSeoPage",
                 "summary": "Execute Commercial Site Diagnostic Evaluation",
                 "security": [
                     {
@@ -77,6 +78,12 @@
                                     "includeAccessibility": {
                                         "type": "boolean",
                                         "default": false
+                                    },
+                                    "viewport": {
+                                        "type": "string",
+                                        "enum": ["desktop", "tablet", "mobile"],
+                                        "default": "desktop",
+                                        "description": "Viewport preset for browser rendering mode."
                                     }
                                 }
                             }

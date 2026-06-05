@@ -1,105 +1,200 @@
-# REVREBEL Website Healthcheck API
-
-A clean-room, robust Node.js microservice architecture designed to perform Technical SEO, Accessibility, Performance, and Hotel Commercial Audits.
+# Website-Healthcheck
 
 ## Overview
 
-This API securely ingests web pages either via a static HTML fetch or a headless Playwright browser rendering engine to extract and score:
-- Technical SEO (Robots, Sitemaps, Meta tags, Canonicalization)
-- Accessibility (axe-core standards)
-- Performance (Google Lighthouse)
-- Structured Data (Schema.org/JSON-LD)
-- Hotel Commercial viability & Technology Detection
+A lightweight Node.js API for auditing websites for technical SEO, structured data, hotel commercial signals, and performance metrics. Designed to run on an Ubuntu server and integrate with AI agents via an OpenAPI specification.
 
-## Installation
+---
 
-1. Install all required dependencies:
-   ```bash
-   npm install
-   ```
+## Requirements
 
-2. Install the necessary headless browser dependencies for Playwright (required for Ubuntu/Linux execution environments):
-   ```bash
-   npx playwright install --with-deps chromium
-   ```
+- **Node.js** v18 or higher (v22 recommended)
+- **npm** v9+
+- **Playwright Chromium** (installed separately — see below)
 
-3. Configure your environment variables in a `.env` file (if you are running in production, the API will fail to start without an API key):
-   ```
-   NODE_ENV=development
-   PORT=3000
-   REVREBEL_API_KEY=<YOUR_API_KEY>
-   ```
+---
 
-## Local Run
+## Environment Variables
 
-Start the API service locally:
+Copy the example file and configure your environment:
+
+```bash
+cp .env.example .env
+```
+
+| Variable            | Required         | Description                                      |
+|---------------------|------------------|--------------------------------------------------|
+| `REVREBEL_API_KEY`  | Yes (production) | API key required for `/api/*` routes             |
+| `PORT`              | No               | Server port. Defaults to `3000`                  |
+| `NODE_ENV`          | No               | Set to `production` for hardened startup checks  |
+
+> **Note:** In development, if `REVREBEL_API_KEY` is not set, the fallback key `rebel-default-development-key` is used automatically. In production, the server will refuse to start without an explicit key.
+
+---
+
+## Install
+
+```bash
+npm install
+```
+
+---
+
+## Install Playwright Browser Dependencies
+
+```bash
+npx playwright install --with-deps chromium
+```
+
+This installs Chromium and all required system libraries for headless browser rendering.
+
+---
+
+## Run Locally
+
 ```bash
 npm start
 ```
-The server will default to port 3000 if not specified in the environment.
 
-## Endpoints and Usage
+The API will start on `http://localhost:3000`.
 
-### 1. Health Check
-An unauthenticated endpoint to verify the service is running.
+---
+
+## Health Check
+
+Verify the server is running:
+
 ```bash
-curl -X GET http://localhost:3000/health
+curl http://localhost:3000/health
 ```
 
-### 2. Static Audit (Fast)
-Performs a fast, static HTML analysis using standard network fetch without executing JavaScript.
+Expected response:
+
+```json
+{
+  "status": "UP",
+  "timestamp": "2026-06-04T00:00:00.000Z"
+}
+```
+
+---
+
+## OpenAPI Spec
+
+The OpenAPI specification is served as a static file and does not require an API key:
+
+```bash
+curl http://localhost:3000/openapi.json
+```
+
+---
+
+## Static Audit Test
+
+Run a static HTML audit (no browser rendering):
 
 ```bash
 curl -X POST http://localhost:3000/api/audit \
-  -H 'Content-Type: application/json' \
-  -H 'x-api-key: <YOUR_API_KEY>' \
-  -d '{
-    "url": "https://example.com",
-    "renderMode": "static"
-  }'
+  -H "Content-Type: application/json" \
+  -H "x-api-key: rebel-default-development-key" \
+  -d '{"url":"https://example.com","renderMode":"static"}'
 ```
 
-### 3. Browser Audit (Dynamic / JS Heavy)
-Performs a deep, headless Playwright analysis. Required for Single Page Applications (SPAs) or sites reliant on JavaScript.
+---
+
+## Browser Audit Test
+
+Run a full browser-rendered audit using Playwright:
 
 ```bash
 curl -X POST http://localhost:3000/api/audit \
-  -H 'Content-Type: application/json' \
-  -H 'x-api-key: <YOUR_API_KEY>' \
-  -d '{
-    "url": "https://example.com",
-    "renderMode": "browser",
-    "includeAccessibility": true,
-    "includePerformance": true
-  }'
+  -H "Content-Type: application/json" \
+  -H "x-api-key: rebel-default-development-key" \
+  -d '{"url":"https://example.com","renderMode":"browser","viewport":"desktop"}'
 ```
 
-### 4. OpenAPI Specification
-The server automatically serves its static OpenAPI documentation asset.
-**URL:** `http://localhost:3000/openapi.json`
+---
 
-## Production Deployment (Ubuntu/PM2/Nginx Notes)
+## Unauthorized Request Test
 
-For production deployment on an Ubuntu server:
-1. **PM2:** Use `pm2` to manage the Node.js process and handle restarts gracefully.
-   ```bash
-   npm install -g pm2
-   pm2 start src/index.js --name revrebel-api --env production
-   pm2 save
-   ```
-2. **Environment:** Ensure `NODE_ENV=production` and `REVREBEL_API_KEY` are explicitly defined. The system is designed to "fail closed" on startup if these are missing.
-3. **Playwright Isolation:** Playwright handles process orchestration dynamically. Do not pass manual `--sandbox` arguments when running as root unless strictly necessary. Ensure you have run `npx playwright install --with-deps chromium` on the host machine.
-4. **Nginx Reverse Proxy:** Pass traffic securely through Nginx:
-   ```nginx
-   server {
-       listen 80;
-       server_name api.yourdomain.com;
-       
-       location / {
-           proxy_pass http://localhost:3000;
-           proxy_set_header Host $host;
-           proxy_set_header X-Real-IP $remote_addr;
-           proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-       }
-   }
-   ```
+Requests without a valid API key should return `401 Unauthorized`:
+
+```bash
+curl -X POST http://localhost:3000/api/audit \
+  -H "Content-Type: application/json" \
+  -d '{"url":"https://example.com"}'
+```
+
+Expected response:
+
+```json
+{
+  "success": false,
+  "error": "Unauthorized: Missing or invalid x-api-key."
+}
+```
+
+---
+
+## Audit Request Body
+
+| Field                 | Type      | Default    | Description                                                |
+|-----------------------|-----------|------------|------------------------------------------------------------|
+| `url`                 | `string`  | *required* | The URL to audit                                           |
+| `renderMode`          | `string`  | `"static"` | `"static"` or `"browser"`                                 |
+| `includePerformance`  | `boolean` | `false`    | Run Lighthouse performance audit (slower)                  |
+| `includeAccessibility`| `boolean` | `false`    | Run axe-core accessibility audit (requires browser mode)   |
+| `viewport`            | `string`  | `"desktop"`| `"desktop"`, `"tablet"`, or `"mobile"` (browser mode only) |
+
+---
+
+## PM2 Deployment
+
+Install PM2 globally and start the service:
+
+```bash
+npm install -g pm2
+pm2 start src/index.js --name website-healthcheck --interpreter node
+pm2 save
+pm2 startup
+```
+
+---
+
+## Nginx Reverse Proxy
+
+Example Nginx config (`/etc/nginx/sites-available/healthcheck`):
+
+```nginx
+server {
+    listen 80;
+    server_name your-domain.com;
+
+    location / {
+        proxy_pass http://localhost:3000;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}
+```
+
+Enable and reload:
+
+```bash
+sudo ln -s /etc/nginx/sites-available/healthcheck /etc/nginx/sites-enabled/
+sudo nginx -t
+sudo systemctl reload nginx
+```
+
+---
+
+## Production Notes
+
+- Set `NODE_ENV=production` in your environment.
+- `REVREBEL_API_KEY` is **required** in production — the server will exit on startup if missing.
+- Use HTTPS in production via Nginx with Let's Encrypt (`certbot`).
+- Playwright's Chromium process is a singleton per server instance — it is shared across requests and gracefully closed on SIGTERM/SIGINT.
+- The `/health` and `/openapi.json` endpoints are public and do not require an API key.
