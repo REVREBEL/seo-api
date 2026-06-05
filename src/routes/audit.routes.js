@@ -16,7 +16,7 @@ import { generateScorecard } from '../scoring/scorecard.engine.js';
 const router = Router();
 
 router.post('/audit', async (req, res) => {
-  const { url, renderMode = 'static', includePerformance = false, includeAccessibility = false } = req.body;
+  const { url, renderMode = 'static', includePerformance = false, includeAccessibility = false, viewport = 'desktop' } = req.body;
 
   if (!url || !validateUrlSecure(url)) {
     return res.status(400).json({ success: false, error: 'Bad Request: Invalid or forbidden destination URL configuration.' });
@@ -33,7 +33,7 @@ router.post('/audit', async (req, res) => {
     // Unified Resource Ingestion Engine
     if (renderMode === 'browser' || includeAccessibility) {
       try {
-        const browserRuntimeSnapshot = await executeBrowserWorkflow(url, async (livePageInstance) => {
+        const browserRuntimeSnapshot = await executeBrowserWorkflow(url, { viewport }, async (livePageInstance) => {
           if (includeAccessibility) {
             const rawA11yErrors = await runAccessibilityAudit(livePageInstance);
             return analyzeAccessibility(rawA11yErrors);

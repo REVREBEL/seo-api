@@ -91,6 +91,8 @@ curl http://localhost:3000/openapi.json
 
 ## Static Audit Test
 
+> **Development key notice:** The key `rebel-default-development-key` used in the curl examples below is a well-known development fallback — it is **not a secret**. It is only active when `NODE_ENV` is not `production`. In production you must set `REVREBEL_API_KEY` to a strong, private value.
+
 Run a static HTML audit (no browser rendering):
 
 ```bash

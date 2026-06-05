@@ -18,17 +18,22 @@ const DEFAULT_USER_AGENT =
 
 async function getBrowser() {
   if (!browserInstance) {
-    browserInstance = await chromium.launch({
-      headless: true,
-      args: [
-        '--no-sandbox',
-        '--disable-setuid-sandbox',
-        '--disable-dev-shm-usage',
-        '--disable-gpu',
-        '--no-first-run',
-        '--no-zygote'
-      ]
-    });
+    try {
+      browserInstance = await chromium.launch({
+        headless: true,
+        args: [
+          '--no-sandbox',
+          '--disable-setuid-sandbox',
+          '--disable-dev-shm-usage',
+          '--disable-gpu',
+          '--no-first-run',
+          '--no-zygote'
+        ]
+      });
+    } catch (error) {
+      console.error('[getBrowser] Failed to launch Chromium:', error.message);
+      throw error;
+    }
   }
 
   return browserInstance;
@@ -92,6 +97,9 @@ export async function executeBrowserWorkflow(
   // Support legacy calling pattern: options omitted, callback passed as second argument
   if (typeof options === 'function') {
     pageExecutionCallback = options;
+    options = {};
+  } else if (!options || typeof options !== 'object') {
+    // Defensive guard: normalise null, strings, or other primitives to a safe empty object
     options = {};
   }
 
