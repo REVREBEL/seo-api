@@ -1,7 +1,13 @@
-import technicalSeoRules from './rules/technical-seo.rules.json' assert { type: 'json' };
-import hotelCommercialRules from './rules/hotel-commercial.rules.json' assert { type: 'json' };
-import performanceRules from './rules/performance.rules.json' assert { type: 'json' };
-import accessibilityRules from './rules/accessibility.rules.json' assert { type: 'json' };
+/**
+ * Scorecard & Recommendation Engine
+ * Consolidates individual analyzer reports against rule profiles to compute
+ * weighted scores and prioritize mitigation tasks.
+ */
+
+import technicalSeoRules from './rules/technical-seo.rules.json' with { type: 'json' };
+import hotelCommercialRules from './rules/hotel-commercial.rules.json' with { type: 'json' };
+import performanceRules from './rules/performance.rules.json' with { type: 'json' };
+import accessibilityRules from './rules/accessibility.rules.json' with { type: 'json' };
 
 export function generateScorecard(technicalReport, commercialReport, performanceReport, accessibilityReport) {
   const issueBacklog = [];
@@ -47,8 +53,10 @@ export function generateScorecard(technicalReport, commercialReport, performance
     validCategoryScores.push(a11yScore);
   }
 
-  // 3. Compute dynamic mathematical score average 
-  const globalScore = Math.round(validCategoryScores.reduce((a, b) => a + b, 0) / validCategoryScores.length);
+  // 3. Compute dynamic average score
+  const globalScore = Math.round(
+    validCategoryScores.reduce((a, b) => a + b, 0) / validCategoryScores.length
+  );
   issueBacklog.sort((a, b) => (b.impactLoss || 0) - (a.impactLoss || 0));
 
   return {
@@ -67,9 +75,15 @@ function _calculateCategoryScore(profile, states, backlog) {
   let earned = 0, total = 0;
   for (const [key, conf] of Object.entries(profile.rules)) {
     total += conf.weight;
-    if (states[key]) earned += conf.weight;
-    else {
-      backlog.push({ category: profile.category, priority: conf.priority, impactLoss: conf.weight, recommendation: conf.errorMessage });
+    if (states[key]) {
+      earned += conf.weight;
+    } else {
+      backlog.push({
+        category: profile.category,
+        priority: conf.priority,
+        impactLoss: conf.weight,
+        recommendation: conf.errorMessage
+      });
     }
   }
   return total === 0 ? 0 : Math.round((earned / total) * 100);
