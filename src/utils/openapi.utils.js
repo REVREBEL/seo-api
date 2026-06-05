@@ -3,6 +3,7 @@ import { readFileSync } from 'fs';
 import { resolve, dirname } from 'path';
 import { fileURLToPath } from 'url';
 
+const DEFAULT_VIEWPORTS = new Set(['desktop', 'tablet', 'mobile']);
 let allowedViewports = null;
 
 export function getAllowedViewports() {
@@ -19,7 +20,7 @@ export function getAllowedViewports() {
 
     if (!viewports || !Array.isArray(viewports)) {
         console.error('Error: Could not find or validate viewports in OpenAPI spec. Using default.');
-        allowedViewports = new Set(['desktop', 'tablet', 'mobile']);
+        allowedViewports = DEFAULT_VIEWPORTS;
         return allowedViewports;
     }
 
@@ -28,7 +29,7 @@ export function getAllowedViewports() {
   } catch (error) {
     console.error('Failed to read or parse OpenAPI spec:', error);
     // Fallback to a default set of viewports if the spec is unavailable or malformed
-    allowedViewports = new Set(['desktop', 'tablet', 'mobile']);
+    allowedViewports = DEFAULT_VIEWPORTS;
     return allowedViewports;
   }
 }
