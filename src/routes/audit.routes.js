@@ -15,11 +15,23 @@ import { generateScorecard } from '../scoring/scorecard.engine.js';
 
 const router = Router();
 
+// Strict allowlist matching the OpenAPI spec enum for the viewport field.
+// Custom objects are intentionally excluded at the API surface to prevent
+// authenticated callers from forcing Playwright to allocate arbitrarily large pages.
+const ALLOWED_VIEWPORTS = new Set(['desktop', 'tablet', 'mobile']);
+
 router.post('/audit', async (req, res) => {
   const { url, renderMode = 'static', includePerformance = false, includeAccessibility = false, viewport = 'desktop' } = req.body;
 
   if (!url || !validateUrlSecure(url)) {
     return res.status(400).json({ success: false, error: 'Bad Request: Invalid or forbidden destination URL configuration.' });
+  }
+
+  if (!ALLOWED_VIEWPORTS.has(viewport)) {
+    return res.status(400).json({
+      success: false,
+      error: `Bad Request: viewport must be one of: ${[...ALLOWED_VIEWPORTS].join(', ')}.`
+    });
   }
 
   let targetHtml = null;
