@@ -1,7 +1,4 @@
 import { Router } from 'express';
-import { readFileSync } from 'fs';
-import { resolve, dirname } from 'path';
-import { fileURLToPath } from 'url';
 
 import { validateUrlSecure } from '../utils/security.js';
 import { fetchHtml } from '../services/fetch-html.service.js';
@@ -17,13 +14,9 @@ import { analyzePerformance } from '../analyzers/performance.analyzer.js';
 import { analyzeAccessibility } from '../analyzers/accessibility.analyzer.js';
 import { generateScorecard } from '../scoring/scorecard.engine.js';
 
+import { getAllowedViewports } from '../utils/openapi.utils.js';
+
 const router = Router();
-
-// Dynamically source the single source of truth for viewports from the OpenAPI spec
-const __dirname = dirname(fileURLToPath(import.meta.url));
-const openApiSpec = JSON.parse(readFileSync(resolve(__dirname, '../../../public/openapi.json'), 'utf8'));
-const ALLOWED_VIEWPORTS = new Set(openApiSpec.paths['/api/audit'].post.requestBody.content['application/json'].schema.properties.viewport.enum);
-
 
 router.post('/audit', async (req, res) => {
   const { url, renderMode = 'static', includePerformance = false, includeAccessibility = false, viewport = 'desktop' } = req.body;
@@ -32,6 +25,7 @@ router.post('/audit', async (req, res) => {
     return res.status(400).json({ success: false, error: 'Bad Request: Invalid or forbidden destination URL configuration.' });
   }
 
+  const ALLOWED_VIEWPORTS = getAllowedViewports();
   if (!ALLOWED_VIEWPORTS.has(viewport)) {
     return res.status(400).json({
       success: false,
