@@ -85,3 +85,82 @@ export async function listAuditRuns({ domain, limit, offset } = {}) {
     method: "GET",
   });
 }
+
+export async function importUrlScan(payload) {
+  if (!payload) {
+    throw new Error("payload is required");
+  }
+
+  return requestJson("/api/url-scan/import", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function runUrlScan(payload) {
+  if (!payload?.url) {
+    throw new Error("url is required");
+  }
+
+  return requestJson("/api/url-scan", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function getUrlScan({
+  scanId,
+  includeRaw = false,
+  includeRequests = false,
+} = {}) {
+  if (!scanId) {
+    throw new Error("scanId is required");
+  }
+
+  const params = new URLSearchParams();
+  params.set("includeRaw", String(includeRaw));
+  params.set("includeRequests", String(includeRequests));
+
+  return requestJson(
+    "/api/url-scan/" + encodeURIComponent(scanId) + "?" + params.toString(),
+    {
+      method: "GET",
+    },
+  );
+}
+
+export async function listUrlScans({
+  domain,
+  apexDomain,
+  sourceProvider,
+  limit = 10,
+  offset = 0,
+} = {}) {
+  const params = new URLSearchParams();
+
+  if (domain) params.set("domain", domain);
+  if (apexDomain) params.set("apexDomain", apexDomain);
+  if (sourceProvider) params.set("sourceProvider", sourceProvider);
+  if (limit !== undefined) params.set("limit", String(limit));
+  if (offset !== undefined) params.set("offset", String(offset));
+
+  const query = params.toString();
+  const path = query ? "/api/url-scans?" + query : "/api/url-scans";
+
+  return requestJson(path, {
+    method: "GET",
+  });
+}
+
+export async function refreshUrlScanResult(scanId) {
+  if (!scanId) {
+    throw new Error("scanId is required");
+  }
+
+  return requestJson(
+    "/api/url-scan/" + encodeURIComponent(scanId) + "/refresh",
+    {
+      method: "POST",
+    },
+  );
+}

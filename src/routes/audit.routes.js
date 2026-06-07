@@ -105,7 +105,12 @@ router.post('/audit', async (req, res) => {
     // Unified Resource Ingestion Engine
     if (renderMode === 'browser' || includeAccessibility) {
       try {
-        const browserRuntimeSnapshot = await executeBrowserWorkflow(url, { viewport }, async (livePageInstance) => {
+        const browserRuntimeSnapshot = await executeBrowserWorkflow(url, {
+          viewport,
+          waitUntil: 'domcontentloaded',
+          timeout: 45000,
+          settleTimeMs: 2000
+        }, async (livePageInstance) => {
           if (includeAccessibility) {
             const rawA11yErrors = await runAccessibilityAudit(livePageInstance);
             return analyzeAccessibility(rawA11yErrors);

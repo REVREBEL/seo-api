@@ -45,6 +45,14 @@ app.use((err, req, res, next) => {
     return next(err);
   }
 
+  if (err instanceof SyntaxError && err.status === 400 && 'body' in err) {
+    return res.status(400).json({
+      success: false,
+      error: 'Invalid JSON request body.',
+      message: 'Check that all property names and string values use straight double quotes.'
+    });
+  }
+
   const isProduction = process.env.NODE_ENV === 'production';
 
   if (isProduction) {

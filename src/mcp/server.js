@@ -9,6 +9,11 @@ import { isInitializeRequest } from '@modelcontextprotocol/sdk/types.js';
 import { auditSeoPageTool } from './tools/audit-seo-page.tool.js';
 import { getAuditRunTool } from './tools/get-audit-run.tool.js';
 import { listAuditRunsTool } from './tools/list-audit-runs.tool.js';
+import { importUrlScanTool } from './tools/import-url-scan.tool.js';
+import { runUrlScanTool } from './tools/run-url-scan.tool.js';
+import { getUrlScanTool } from './tools/get-url-scan.tool.js';
+import { listUrlScansTool } from './tools/list-url-scans.tool.js';
+import { refreshUrlScanResultTool } from './tools/refresh-url-scan-result.tool.js';
 
 function createSeoMcpServer() {
   const server = new McpServer({
@@ -19,7 +24,12 @@ function createSeoMcpServer() {
   const tools = [
     auditSeoPageTool,
     getAuditRunTool,
-    listAuditRunsTool
+    listAuditRunsTool,
+    importUrlScanTool,
+    runUrlScanTool,
+    getUrlScanTool,
+    listUrlScansTool,
+    refreshUrlScanResultTool
   ];
 
   for (const tool of tools) {

@@ -215,7 +215,7 @@
         "/api/url-scan/import": {
             "post": {
                 "operationId": "importUrlScan",
-                "summary": "Import a completed Cloudflare-style scanner JSON result",
+                "summary": "Import a completed raw URL scanner payload.",
                 "security": [
                     {
                         "ApiKeyAuth": []
@@ -258,8 +258,8 @@
         },
         "/api/url-scan": {
             "post": {
-                "operationId": "runCloudflareUrlScan",
-                "summary": "Submit a URL to the configured scanner provider",
+                "operationId": "runUrlScan",
+                "summary": "Run a new URL scanner request.",
                 "security": [
                     {
                         "ApiKeyAuth": []
@@ -305,7 +305,7 @@
         "/api/url-scan/{scanId}": {
             "get": {
                 "operationId": "getUrlScan",
-                "summary": "Retrieve a URL scan by ID",
+                "summary": "Retrieve a stored URL scanner result.",
                 "security": [
                     {
                         "ApiKeyAuth": []
@@ -351,7 +351,7 @@
         "/api/url-scans": {
             "get": {
                 "operationId": "listUrlScans",
-                "summary": "List URL scans",
+                "summary": "List stored URL scanner results.",
                 "security": [
                     {
                         "ApiKeyAuth": []
@@ -405,8 +405,8 @@
         },
         "/api/url-scan/{scanId}/refresh": {
             "post": {
-                "operationId": "refreshCloudflareUrlScan",
-                "summary": "Refresh a Cloudflare URL scan result",
+                "operationId": "refreshUrlScanResult",
+                "summary": "Refresh a provider-backed URL scanner result.",
                 "security": [
                     {
                         "ApiKeyAuth": []
