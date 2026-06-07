@@ -1,1 +1,2 @@
--- Down Migration\nDROP TABLE audit_runs;
+-- Down Migration
+DROP TABLE audit_runs;
