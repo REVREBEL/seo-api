@@ -22,14 +22,14 @@ Copy the example file and configure your environment:
 cp .env.example .env
 ```
 
-| Variable           | Required         | Description                                     |
-| ------------------ | ---------------- | ----------------------------------------------- |
-| `REVREBEL_API_KEY` | Yes (production) | API key required for `/api/*` routes            |
-| `PORT`             | No               | Server port. Defaults to `3000`                 |
-| `NODE_ENV`         | No               | Set to `production` for hardened startup checks |
-| `DATABASE_URL`     | No               | Connection string for Postgres database         |
+| Variable       | Required         | Description                                     |
+| -------------- | ---------------- | ----------------------------------------------- |
+| `SEO_API_KEY`  | Yes (production) | API key required for `/api/*` routes            |
+| `PORT`         | No               | Server port. Defaults to `3000`                 |
+| `NODE_ENV`     | No               | Set to `production` for hardened startup checks |
+| `DATABASE_URL` | No               | Connection string for Postgres database         |
 
-> **Note:** In development, if `REVREBEL_API_KEY` is not set, the fallback key `rebel-default-development-key` is used automatically. In production, the server will refuse to start without an explicit key.
+> **Note:** In development, if `SEO_API_KEY` is not set, the fallback key `rebel-default-development-key` is used automatically. In production, the server will refuse to start without an explicit key.
 
 ---
 
@@ -92,7 +92,7 @@ curl http://localhost:3000/openapi.json
 
 ## Static Audit Test
 
-> **Development key notice:** The key `rebel-default-development-key` used in the curl examples below is a well-known development fallback — it is **not a secret**. It is only active when `NODE_ENV` is not `production`. In production you must set `REVREBEL_API_KEY` to a strong, private value.
+> **Development key notice:** The key `rebel-default-development-key` used in the curl examples below is a well-known development fallback — it is **not a secret**. It is only active when `NODE_ENV` is not `production`. In production you must set `SEO_API_KEY` to a strong, private value.
 
 Run a static HTML audit (no browser rendering):
 
@@ -161,13 +161,14 @@ The API can persist audit runs to a Postgres database.
 
     ```sql
     CREATE DATABASE seoapi_db;
-    CREATE USER seoapi WITH PASSWORD 'replace-with-secure-password';
-    GRANT ALL PRIVILEGES ON DATABASE seoapi TO seoapi_db;
-    \c seo_api
-    GRANT ALL ON SCHEMA public TO seoapi;
-    ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO seoapi;
-    ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON SEQUENCES TO seoapi;
-    ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON FUNCTIONS TO seoapi;
+    CREATE USER seoapi_user WITH PASSWORD 'replace-with-secure-password';
+    GRANT ALL PRIVILEGES ON DATABASE seoapi_db TO seoapi_user;
+    \c seoapi_db
+
+    GRANT ALL ON SCHEMA public TO seoapi_user;
+    ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO seoapi_user;
+    ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON SEQUENCES TO seoapi_user;
+    ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON FUNCTIONS TO seoapi_user;
     ```
 
 2.  **Set Environment Variable**
@@ -175,7 +176,8 @@ The API can persist audit runs to a Postgres database.
     Update your `.env` file:
 
     ```env
-    DATABASE_URL=postgresql://seo_api_user:REPLACE_WITH_PASSWORD@localhost:5432/seo_api
+    DATABASE_URL=postgresql://seoapi_user:REPLACE_WITH_PASSWORD@localhost:5432/seoapi_db
+
     ```
 
 ### Run Migrations
@@ -228,15 +230,27 @@ pm2 startup
 
 ## Nginx Reverse Proxy
 
-Example Nginx config (`/etc/nginx/sites-available/healthcheck`):
+Example Nginx config (`/etc/nginx/sites-available/nginx_seo-api.conf`):
 
 ```nginx
 server {
     listen 80;
     server_name your-domain.com;
 
+    # MCP Server Proxy
+    location /mcp {
+        proxy_pass http://127.0.0.1:3010/mcp;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_buffering off; # Important for streaming responses
+    }
+
+    # Main API Proxy
     location / {
-        proxy_pass http://localhost:3000;
+        proxy_pass http://127.0.0.1:3000;
         proxy_http_version 1.1;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
@@ -249,7 +263,7 @@ server {
 Enable and reload:
 
 ```bash
-sudo ln -s /etc/nginx/sites-available/healthcheck /etc/nginx/sites-enabled/
+sudo ln -s /etc/nginx/sites-available/nginx_seo-api.conf /etc/nginx/sites-enabled/
 sudo nginx -t
 sudo systemctl reload nginx
 ```

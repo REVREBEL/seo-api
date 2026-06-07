@@ -161,7 +161,7 @@ Also keep existing app variables:
 ```env
 NODE_ENV=production
 PORT=3000
-REVREBEL_API_KEY=replace-with-secure-api-key
+SEO_API_KEY=replace-with-secure-api-key
 ```
 
 Optional separate Postgres variables may be supported, but `DATABASE_URL` is preferred for simplicity.
