@@ -27,6 +27,7 @@ cp .env.example .env
 | `REVREBEL_API_KEY`  | Yes (production) | API key required for `/api/*` routes             |
 | `PORT`              | No               | Server port. Defaults to `3000`                  |
 | `NODE_ENV`          | No               | Set to `production` for hardened startup checks  |
+| `DATABASE_URL`      | No               | Connection string for Postgres database          |
 
 > **Note:** In development, if `REVREBEL_API_KEY` is not set, the fallback key `rebel-default-development-key` is used automatically. In production, the server will refuse to start without an explicit key.
 
@@ -109,9 +110,9 @@ curl -X POST http://localhost:3000/api/audit \
 Run a full browser-rendered audit using Playwright:
 
 ```bash
-curl -X POST http://localhost:3000/api/audit \
-  -H "Content-Type: application/json" \
-  -H "x-api-key: rebel-default-development-key" \
+curl -X POST http://localhost:3000/api/audit 
+  -H "Content-Type: application/json" 
+  -H "x-api-key: rebel-default-development-key" 
   -d '{"url":"https://example.com","renderMode":"browser","viewport":"desktop"}'
 ```
 
@@ -122,8 +123,8 @@ curl -X POST http://localhost:3000/api/audit \
 Requests without a valid API key should return `401 Unauthorized`:
 
 ```bash
-curl -X POST http://localhost:3000/api/audit \
-  -H "Content-Type: application/json" \
+curl -X POST http://localhost:3000/api/audit 
+  -H "Content-Type: application/json" 
   -d '{"url":"https://example.com"}'
 ```
 
@@ -147,6 +148,68 @@ Expected response:
 | `includePerformance`  | `boolean` | `false`    | Run Lighthouse performance audit (slower)                  |
 | `includeAccessibility`| `boolean` | `false`    | Run axe-core accessibility audit (requires browser mode)   |
 | `viewport`            | `string`  | `"desktop"`| `"desktop"`, `"tablet"`, or `"mobile"` (browser mode only) |
+
+---
+
+## Postgres Persistence
+
+The API can persist audit runs to a Postgres database.
+
+### Database Setup
+
+1.  **Create Database and User**
+
+    ```sql
+    CREATE DATABASE seo_api;
+    CREATE USER seo_api_user WITH PASSWORD 'replace-with-secure-password';
+    GRANT ALL PRIVILEGES ON DATABASE seo_api TO seo_api_user;
+    \c seo_api
+    GRANT ALL ON SCHEMA public TO seo_api_user;
+    ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO seo_api_user;
+    ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON SEQUENCES TO seo_api_user;
+    ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON FUNCTIONS TO seo_api_user;
+    ```
+
+2.  **Set Environment Variable**
+
+    Update your `.env` file:
+
+    ```env
+    DATABASE_URL=postgresql://seo_api_user:REPLACE_WITH_PASSWORD@localhost:5432/seo_api
+    ```
+
+### Run Migrations
+
+Run the following command from the project root to create the necessary tables:
+
+```bash
+npm run db:migrate
+```
+
+### API Usage
+
+*   **Create Audit**
+
+    ```bash
+    curl -X POST https://seo-api.revrebel.io/api/audit 
+      -H "Content-Type: application/json" 
+      -H "x-api-key: YOUR_SECRET_KEY" 
+      -d '{"url":"https://example.com","renderMode":"static"}'
+    ```
+
+*   **Retrieve Audit**
+
+    ```bash
+    curl https://seo-api.revrebel.io/api/audit/YOUR_AUDIT_ID 
+      -H "x-api-key: YOUR_SECRET_KEY"
+    ```
+
+*   **List Audits**
+
+    ```bash
+    curl "https://seo-api.revrebel.io/api/audits?domain=example.com&limit=10" 
+      -H "x-api-key: YOUR_SECRET_KEY"
+    ```
 
 ---
 

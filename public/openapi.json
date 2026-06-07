@@ -7,8 +7,8 @@
     },
     "servers": [
         {
-            "url": "http://localhost:3000",
-            "description": "Local Run Environment Instance"
+            "url": "https://seo-api.revrebel.io",
+            "description": "Production Environment"
         }
     ],
     "paths": {
@@ -102,43 +102,15 @@
                                             "type": "boolean",
                                             "example": true
                                         },
-                                        "targetUrl": {
-                                            "type": "string"
-                                        },
-                                        "fetchedAt": {
+                                        "auditId": {
                                             "type": "string",
-                                            "format": "date-time"
+                                            "format": "uuid"
                                         },
-                                        "renderMode": {
-                                            "type": "string"
+                                        "status": {
+                                            "type": "string",
+                                            "example": "completed"
                                         },
-                                        "rawFetch": {
-                                            "type": "object"
-                                        },
-                                        "structuredData": {
-                                            "type": "object"
-                                        },
-                                        "technologies": {
-                                            "type": "array",
-                                            "items": {
-                                                "type": "string"
-                                            }
-                                        },
-                                        "technicalSeo": {
-                                            "type": "object"
-                                        },
-                                        "hotelCommercial": {
-                                            "type": "object"
-                                        },
-                                        "performance": {
-                                            "type": "object",
-                                            "nullable": true
-                                        },
-                                        "accessibility": {
-                                            "type": "object",
-                                            "nullable": true
-                                        },
-                                        "scorecard": {
+                                        "result": {
                                             "type": "object"
                                         }
                                     }
@@ -151,6 +123,91 @@
                     },
                     "400": {
                         "description": "SSRF or invalid URL specification rejection payload"
+                    }
+                }
+            }
+        },
+        "/api/audit/{auditId}": {
+            "get": {
+                "operationId": "getAuditRun",
+                "summary": "Retrieve a specific audit run by its ID",
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "parameters": [
+                    {
+                        "name": "auditId",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "The requested audit run",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Audit run not found"
+                    }
+                }
+            }
+        },
+        "/api/audits": {
+            "get": {
+                "operationId": "listAuditRuns",
+                "summary": "List recent audit runs",
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "parameters": [
+                    {
+                        "name": "domain",
+                        "in": "query",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "limit",
+                        "in": "query",
+                        "schema": {
+                            "type": "integer",
+                            "default": 10
+                        }
+                    },
+                    {
+                        "name": "offset",
+                        "in": "query",
+                        "schema": {
+                            "type": "integer",
+                            "default": 0
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "A list of recent audit runs",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object"
+                                }
+                            }
+                        }
                     }
                 }
             }

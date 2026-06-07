@@ -8,7 +8,10 @@
   "main": "src/index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "node src/index.js"
+    "start": "node src/index.js",
+    "db:migrate": "node-pg-migrate -m db/migrations up",
+    "db:rollback": "node-pg-migrate -m db/migrations down",
+    "db:migrate:create": "node-pg-migrate -m db/migrations create"
   },
   "dependencies": {
     "@axe-core/playwright": "^4.9.1",
@@ -19,6 +22,8 @@
     "express": "^5.2.1",
     "helmet": "^8.0.0",
     "lighthouse": "^12.1.0",
+    "node-pg-migrate": "^8.0.4",
+    "pg": "^8.21.0",
     "playwright": "^1.44.1"
   },
   "volta": {
