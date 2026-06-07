@@ -1,0 +1,2 @@
+DROP TABLE IF EXISTS url_scan_requests CASCADE;
+DROP TABLE IF EXISTS url_scans CASCADE;
