@@ -1104,7 +1104,7 @@ Create audit:
 ```bash
 curl -X POST https://seo-api.revrebel.io/api/audit \
   -H "Content-Type: application/json" \
-  -H "x-api-key: YOUR_SECRET_KEY" \
+  -H "x-api-key: your-api-key" \
   -d '{"url":"https://example.com","renderMode":"static"}'
 ```
 
@@ -1112,14 +1112,14 @@ Retrieve audit:
 
 ```bash
 curl https://seo-api.revrebel.io/api/audit/YOUR_AUDIT_ID \
-  -H "x-api-key: YOUR_SECRET_KEY"
+  -H "x-api-key: your-api-key"
 ```
 
 List audits:
 
 ```bash
 curl "https://seo-api.revrebel.io/api/audits?domain=example.com&limit=10" \
-  -H "x-api-key: YOUR_SECRET_KEY"
+  -H "x-api-key: your-api-key"
 ```
 
 ---
@@ -1165,7 +1165,7 @@ Test audit creation:
 ```bash
 curl -X POST https://seo-api.revrebel.io/api/audit \
   -H "Content-Type: application/json" \
-  -H "x-api-key: YOUR_SECRET_KEY" \
+  -H "x-api-key: your-api-key" \
   -d '{"url":"https://example.com","renderMode":"static"}'
 ```
 
@@ -1175,14 +1175,14 @@ Test retrieval:
 
 ```bash
 curl https://seo-api.revrebel.io/api/audit/YOUR_AUDIT_ID \
-  -H "x-api-key: YOUR_SECRET_KEY"
+  -H "x-api-key: your-api-key"
 ```
 
 Test history:
 
 ```bash
 curl "https://seo-api.revrebel.io/api/audits?domain=example.com&limit=10" \
-  -H "x-api-key: YOUR_SECRET_KEY"
+  -H "x-api-key: your-api-key"
 ```
 
 Confirm in Postgres:

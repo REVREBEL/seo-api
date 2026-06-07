@@ -1,0 +1,1 @@
+-- Down Migration\nDROP TABLE audit_runs;

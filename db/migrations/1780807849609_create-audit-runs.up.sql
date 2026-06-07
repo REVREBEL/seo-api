@@ -44,6 +44,3 @@ ON audit_runs USING GIN (result_json);
 
 CREATE INDEX IF NOT EXISTS idx_audit_runs_requested_options_gin
 ON audit_runs USING GIN (requested_options);
-
--- Down Migration
-DROP TABLE audit_runs;
