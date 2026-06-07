@@ -3,15 +3,14 @@
  * Initializer for the Ubuntu microservice environment.
  */
 
+import 'dotenv/config';
 import express from 'express';
 import helmet from 'helmet';
 import cors from 'cors';
-import dotenv from 'dotenv';
 import auditRouter from './routes/audit.routes.js';
 import { requireApiKey } from './utils/security.js';
 import { closeBrowser } from './services/render-html.service.js';
 
-dotenv.config();
 
 // 1. Production Fail-Closed Configuration Sentinel
 if (process.env.NODE_ENV === 'production' && !process.env.SEO_API_KEY) {
@@ -68,7 +67,7 @@ const server = app.listen(PORT, () => {
 // Graceful teardown protocol to catch system interrupts cleanly
 const gracefulShutdown = async () => {
   console.log('\nStopping system services gracefully...');
-  
+
   // Force exit after 10 seconds to prevent hanging on active connections
   const timeoutHandle = setTimeout(() => {
     console.error('Forcing shutdown due to timeout...');
