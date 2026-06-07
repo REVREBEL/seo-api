@@ -50,8 +50,8 @@ export async function listAuditRuns({ domain, limit = 10, offset = 0 } = {}) {
   const params = new URLSearchParams();
 
   if (domain) params.set("domain", domain);
-  if (limit) params.set("limit", String(limit));
-  if (offset) params.set("offset", String(offset));
+  if (limit !== undefined) params.set("limit", String(limit));
+  if (offset !== undefined) params.set("offset", String(offset));
 
   const query = params.toString();
   const path = query ? `/api/audits?${query}` : "/api/audits";
