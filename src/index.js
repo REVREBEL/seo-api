@@ -10,6 +10,8 @@ import cors from 'cors';
 import auditRouter from './routes/audit.routes.js';
 import urlScanRouter from './routes/url-scan.routes.js';
 import sitemapRouter from './routes/sitemap.routes.js';
+import backlinkRouter from './routes/backlink.routes.js';
+import unlighthouseRouter from './routes/unlighthouse.routes.js';
 import { requireApiKey } from './utils/security.js';
 import { closeBrowser } from './services/render-html.service.js';
 
@@ -40,6 +42,8 @@ app.get('/health', (req, res) => {
 app.use('/api', requireApiKey, auditRouter);
 app.use('/api', requireApiKey, urlScanRouter);
 app.use('/api', requireApiKey, sitemapRouter);
+app.use('/api', requireApiKey, backlinkRouter);
+app.use('/api', requireApiKey, unlighthouseRouter);
 
 // Global Error Handler for Express 5 native async promise rejections
 app.use((err, req, res, next) => {
