@@ -329,7 +329,7 @@ You can check the health of the MCP server by sending a GET request to `/health`
 curl http://localhost:3010/health
 ```
 
-When running behind the Nginx proxy, you can also test the public health endpoint for the main API and the MCP endpoint (if you configure a health check route for it in nginx).
+When running behind the Nginx proxy, you can also test the public health endpoint for the main API and the MCP endpoint (if you configure a health check route for it in Nginx).
 
 ```bash
 curl https://seo-api.revrebel.io/health
