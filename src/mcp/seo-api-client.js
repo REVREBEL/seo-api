@@ -56,6 +56,9 @@ async function requestJson(path, options = {}) {
 }
 
 export async function auditSeoPage(payload) {
+  if (!payload) {
+    throw new Error("payload is required");
+  }
   return requestJson("/api/audit", {
     method: "POST",
     body: JSON.stringify(payload),
@@ -63,21 +66,21 @@ export async function auditSeoPage(payload) {
 }
 
 export async function getAuditRun(auditId) {
-  return requestJson(`/api/audit/${encodeURIComponent(auditId)}`, {
+  if (!auditId) {
+    throw new Error("auditId is required");
+  }
+  return requestJson("/api/audit/" + encodeURIComponent(auditId), {
     method: "GET",
   });
 }
 
-export async function listAuditRuns({ domain, limit = 10, offset = 0 } = {}) {
+export async function listAuditRuns({ domain, limit, offset } = {}) {
   const params = new URLSearchParams();
-
   if (domain) params.set("domain", domain);
-  if (limit !== undefined) params.set("limit", String(limit));
-  if (offset !== undefined) params.set("offset", String(offset));
-
+  if (limit != null) params.set("limit", String(limit));
+  if (offset != null) params.set("offset", String(offset));
   const query = params.toString();
-  const path = query ? `/api/audits?${query}` : "/api/audits";
-
+  const path = query ? "/api/audits?" + query : "/api/audits";
   return requestJson(path, {
     method: "GET",
   });

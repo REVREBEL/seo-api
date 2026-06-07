@@ -1,5 +1,3 @@
-import axios from 'axios';
-
 export async function submitCloudflareUrlScan(targetUrl) {
     const accountId = process.env.CLOUDFLARE_ACCOUNT_ID;
     const token = process.env.CLOUDFLARE_URLSCANNER_API_TOKEN;
@@ -13,18 +11,29 @@ export async function submitCloudflareUrlScan(targetUrl) {
     }
 
     try {
-        const response = await axios.post(`${baseUrl}${scanPath}`, { url: targetUrl }, {
+        const response = await fetch(`${baseUrl}${scanPath}`, {
+            method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
                 'Authorization': `Bearer ${token}`
-            }
+            },
+            body: JSON.stringify({ url: targetUrl })
         });
-        return response.data;
+
+        const data = await readJsonResponse(response);
+        if (!response.ok) {
+            throw {
+                status: response.status,
+                details: data || response.statusText
+            };
+        }
+
+        return data;
     } catch (error) {
         throw {
             message: 'Cloudflare edge scanner submission rejected.',
-            status: error.response?.status || 500,
-            details: error.response?.data || error.message
+            status: error.status || 500,
+            details: error.details || error.message
         };
     }
 }
@@ -38,17 +47,38 @@ export async function getCloudflareUrlScanResult(providerScanId) {
     resultPath = resultPath.replace('{accountId}', accountId).replace('{scanId}', providerScanId);
 
     try {
-        const response = await axios.get(`${baseUrl}${resultPath}`, {
+        const response = await fetch(`${baseUrl}${resultPath}`, {
+            method: 'GET',
             headers: {
                 'Authorization': `Bearer ${token}`
             }
         });
-        return response.data;
+
+        const data = await readJsonResponse(response);
+        if (!response.ok) {
+            throw {
+                status: response.status,
+                details: data || response.statusText
+            };
+        }
+
+        return data;
     } catch (error) {
         throw {
             message: 'Failed to retrieve Cloudflare scan execution payload.',
-            status: error.response?.status || 500,
-            details: error.response?.data || error.message
+            status: error.status || 500,
+            details: error.details || error.message
         };
+    }
+}
+
+async function readJsonResponse(response) {
+    const text = await response.text();
+    if (!text) return null;
+
+    try {
+        return JSON.parse(text);
+    } catch {
+        return text;
     }
 }

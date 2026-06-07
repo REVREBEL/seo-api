@@ -10,13 +10,6 @@ import { auditSeoPageTool } from './tools/audit-seo-page.tool.js';
 import { getAuditRunTool } from './tools/get-audit-run.tool.js';
 import { listAuditRunsTool } from './tools/list-audit-runs.tool.js';
 
-// URL Scanner Tools
-import { importUrlScanTool } from './tools/import-url-scan.tool.js';
-import { getUrlScanTool } from './tools/get-url-scan.tool.js';
-import { listUrlScansTool } from './tools/list-url-scans.tool.js';
-import { runCloudflareUrlScanTool } from './tools/run-cloudflare-url-scan.tool.js';
-import { refreshCloudflareUrlScanTool } from './tools/refresh-cloudflare-url-scan.tool.js';
-
 function createSeoMcpServer() {
   const server = new McpServer({
     name: 'seo-api-mcp',
@@ -26,12 +19,7 @@ function createSeoMcpServer() {
   const tools = [
     auditSeoPageTool,
     getAuditRunTool,
-    listAuditRunsTool,
-    importUrlScanTool,
-    getUrlScanTool,
-    listUrlScansTool,
-    runCloudflareUrlScanTool,
-    refreshCloudflareUrlScanTool
+    listAuditRunsTool
   ];
 
   for (const tool of tools) {
