@@ -1,5 +1,4 @@
-const path = require("path");
-
+// const path = require("path"); // uncomment when path is needed
 module.exports = {
   apps: [
     {
