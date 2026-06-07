@@ -87,37 +87,24 @@ For production, the MCP server should be reachable over HTTPS through Nginx, for
 https://seo-api.revrebel.io/mcp
 ```
 
-or, if cleaner operationally:
+---
 
-```text
-https://mcp-seo-api.revrebel.io/mcp
-```
+## Recommended Package [COMPLETED]
 
-Preferred path if hosted inside the same domain:
+The official MCP SDK and Zod infrastructure have been manually provisioned in the workspace to prevent process locks:
 
-```text
-https://seo-api.revrebel.io/mcp
-```
+- `@modelcontextprotocol/sdk` (Installed)
+- `zod` (Installed)
+
+### Code Generation Rules:
+
+- Use `zod` for all tool input schemas.
+- Implement the current recommended **Streamable HTTP server pattern** for the remote server architecture.
+- Do not drop back to legacy, dual-endpoint SSE transport samples unless explicitly required.
 
 ---
 
-## Recommended Package
-
-Use the official MCP TypeScript/JavaScript SDK if practical:
-
-```bash
-npm install @modelcontextprotocol/sdk zod
-```
-
-Use `zod` for tool input schemas if the SDK pattern supports it cleanly.
-
-If the SDK version or transport API has changed, inspect the installed SDK docs/types and implement the current recommended Streamable HTTP server pattern.
-
-Do not use stale examples blindly.
-
----
-
-## Environment Variables
+## Environment Variables [COMPLETED]
 
 Add to `.env.example` and production `.env` as needed:
 
@@ -139,7 +126,7 @@ Notes:
 
 ---
 
-## New Files To Add
+## New Files To Add [COMPLETED]
 
 Add:
 
@@ -337,7 +324,7 @@ list_audit_runs
 
 ---
 
-## REST Client Module
+## REST Client Module [COMPLETED]
 
 Create:
 
@@ -416,7 +403,7 @@ export async function listAuditRuns({ domain, limit = 10, offset = 0 } = {}) {
 
 ---
 
-## MCP Server Implementation Requirements
+## MCP Server Implementation Requirements [COMPLETED]
 
 Create:
 
@@ -435,7 +422,7 @@ The server should:
 7. Expose the MCP endpoint at `/mcp`.
 8. Optionally expose `/health` for the MCP wrapper.
 
-### Required Health Endpoint
+### Required Health Endpoint [COMPLETED]
 
 Expose:
 
@@ -457,7 +444,7 @@ This health endpoint is for Nginx/PM2 testing and does not need to be MCP protoc
 
 ---
 
-## Authentication For MCP Endpoint
+## Authentication For MCP Endpoint [COMPLETED]
 
 If the MCP client supports custom headers, require:
 
@@ -476,7 +463,7 @@ The MCP server must never expose `SEO_API_KEY` to the client.
 
 ---
 
-## PM2 Process
+## PM2 Process [COMPLETED]
 
 Add a second PM2 app entry or a separate ecosystem config.
 
@@ -532,7 +519,7 @@ pm2 save
 
 ---
 
-## Nginx Routing
+## Nginx Routing [COMPLETED]
 
 The existing public backend URL is:
 

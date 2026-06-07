@@ -14,8 +14,8 @@ import { closeBrowser } from './services/render-html.service.js';
 dotenv.config();
 
 // 1. Production Fail-Closed Configuration Sentinel
-if (process.env.NODE_ENV === 'production' && !process.env.REVREBEL_API_KEY) {
-  console.error('❌ CRITICAL STARTUP ERROR: REVREBEL_API_KEY must be defined when running in production mode.');
+if (process.env.NODE_ENV === 'production' && !process.env.SEO_API_KEY) {
+  console.error('❌ CRITICAL STARTUP ERROR: SEO_API_KEY must be defined when running in production mode.');
   process.exit(1);
 }
 
