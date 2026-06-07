@@ -1,5 +1,5 @@
-import { createMcpServer } from "@modelcontextprotocol/sdk/server/index.js";
-import { createStreamableHttpServer } from "@modelcontextprotocol/sdk/server/http.js";
+import { McpServer } from "@modelcontextprotocol/sdk/server/index.js";
+import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/http.js";
 import {
   CallToolRequestSchema,
   ListToolsRequestSchema,
@@ -10,17 +10,12 @@ import { getAuditRunTool } from "./tools/get-audit-run.tool.js";
 import { listAuditRunsTool } from "./tools/list-audit-runs.tool.js";
 import { zodToJsonSchema } from "zod-to-json-schema";
 
-const server = new createMcpServer(
-  {
-    name: "seo-api-mcp",
-    version: "1.0.0",
-  },
-  {
-    capabilities: {
-      tools: {},
-    },
-  }
-);
+const server = new McpServer({
+  name: "seo-api-mcp",
+  version: "1.0.0",
+});
+
+const transport = new StreamableHTTPServerTransport("/mcp", server);
 
 const tools = [auditSeoPageTool, getAuditRunTool, listAuditRunsTool];
 
