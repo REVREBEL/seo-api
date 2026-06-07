@@ -110,9 +110,9 @@ curl -X POST http://localhost:3000/api/audit \
 Run a full browser-rendered audit using Playwright:
 
 ```bash
-curl -X POST http://localhost:3000/api/audit 
-  -H "Content-Type: application/json" 
-  -H "x-api-key: rebel-default-development-key" 
+curl -X POST http://localhost:3000/api/audit \
+  -H "Content-Type: application/json" \
+  -H "x-api-key: your-api-key" \
   -d '{"url":"https://example.com","renderMode":"browser","viewport":"desktop"}'
 ```
 
@@ -191,24 +191,24 @@ npm run db:migrate
 *   **Create Audit**
 
     ```bash
-    curl -X POST https://seo-api.revrebel.io/api/audit 
-      -H "Content-Type: application/json" 
-      -H "x-api-key: YOUR_SECRET_KEY" 
+    curl -X POST https://seo-api.revrebel.io/api/audit \
+      -H "Content-Type: application/json" \
+      -H "x-api-key: your-api-key" \
       -d '{"url":"https://example.com","renderMode":"static"}'
     ```
 
 *   **Retrieve Audit**
 
     ```bash
-    curl https://seo-api.revrebel.io/api/audit/YOUR_AUDIT_ID 
-      -H "x-api-key: YOUR_SECRET_KEY"
+    curl https://seo-api.revrebel.io/api/audit/YOUR_AUDIT_ID \
+      -H "x-api-key: your-api-key"
     ```
 
 *   **List Audits**
 
     ```bash
-    curl "https://seo-api.revrebel.io/api/audits?domain=example.com&limit=10" 
-      -H "x-api-key: YOUR_SECRET_KEY"
+    curl "https://seo-api.revrebel.io/api/audits?domain=example.com&limit=10" \
+      -H "x-api-key: your-api-key"
     ```
 
 ---
