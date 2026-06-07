@@ -68,6 +68,8 @@ ORDER BY rank DESC;
 ## Range types and exclusion constraints
 
 ```sql
+CREATE EXTENSION IF NOT EXISTS btree_gist;
+
 CREATE TABLE reservation (
   id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
   room_id BIGINT NOT NULL,
