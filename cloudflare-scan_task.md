@@ -1,21 +1,363 @@
-# seo-api Addendum — Cloudflare URL Scanner Live API Authentication + Submission
+# seo-api Task — Add URL Scanner Capability With Raw Output Capture
+
+### Instruction
+
+This task is focused on implementation only.
+
+The Gemini Code Agent should:
+
+- Add the URL Scanner data model
+- Add raw-output capture
+- Add import support for completed scanner JSON
+- Add Cloudflare live provider scaffolding
+- Add REST endpoints
+- Add OpenAPI documentation
+- Add README documentation
+- Add MCP tool definitions only if the MCP server already exists
+
+---
 
 ## Project
 
 **Project name:** `seo-api`  
 **Backend URL:** `https://seo-api.revrebel.io`  
-**Related task:** URL Scanner import / capture-everything task  
-**Purpose of this addendum:** Add Cloudflare URL Scanner API credentials, live scan submission, result retrieval, and raw result capture.
+**Runtime:** Node.js / Express  
+**Database:** Postgres  
+**Migration approach:** timestamped up/down migrations using the project migration runner  
+**Process manager:** PM2  
+**Node manager:** Volta  
+**App location:** under `/home/<app-user>/...`, not `/var/www`  
+**Main API entry:** `src/index.js`  
+**MCP server entry, if present:** `src/mcp/server.js`
 
 ---
 
-## Why This Addendum Exists
+## Mission
 
-The prior URL Scanner task focused on importing and storing an already-completed Cloudflare-style URL Scanner JSON result.
+Add a URL Scanner capability to `seo-api`.
 
-That is still useful, but it is incomplete.
+The scanner capability should preserve the complete raw output from a Cloudflare-style URL Scanner result and prepare the system to submit live Cloudflare URL Scanner jobs later.
 
-The Cloudflare article/API example shows a live API submission flow using:
+The core rule:
+
+```text
+Capture everything first. Curate later.
+```
+
+Do not discard fields from the scanner API output.
+
+---
+
+## Current Build Order Context
+
+The intended project order is:
+
+```text
+1. Recovery MVP
+2. Postgres persistence for /api/audit
+3. Migration runner
+4. URL Scanner raw storage and import
+5. Cloudflare live URL Scanner provider scaffolding
+6. MCP wrapper/tool exposure
+7. Codex/API testing task
+8. Curated summaries and benchmarking
+```
+
+This task covers items 4, 5, and related documentation.
+
+This task does not cover item 7. API testing is deferred.
+
+---
+
+## Non-Negotiable Data Policy
+
+The scanner result must be stored in full.
+
+The database must preserve:
+
+```text
+Full raw API output
+Full request/response event list
+Full task metadata
+Full page metadata
+Full stats object
+Full verdicts object
+Full detected technology/list data
+Full cookies data
+Full console output
+Full links/globals/performance data if present
+Unknown future fields
+Provider-specific fields
+```
+
+The system may derive summaries and normalized request rows, but the raw payload is the source of truth.
+
+---
+
+## Existing Reference Payload
+
+A Cloudflare-style scanner JSON example has been provided from a scan of:
+
+```text
+https://www.staynownow.com/
+```
+
+The example includes sections like:
+
+```text
+data
+lists
+meta
+page
+scanner
+stats
+task
+verdicts
+```
+
+Important nested data includes:
+
+```text
+data.requests
+data.cookies
+data.console
+data.links
+data.globals
+data.performance
+stats.domainStats
+stats.ipStats
+stats.protocolStats
+stats.resourceStats
+stats.tlsStats
+stats.serverStats
+page
+task
+verdicts
+```
+
+The implementation should not assume this list is exhaustive.
+
+Unknown future fields must stay preserved inside `raw_scan_json`.
+
+---
+
+## Required Endpoints
+
+Add these REST endpoints:
+
+```http
+POST /api/url-scan/import
+POST /api/url-scan
+GET  /api/url-scan/:scanId
+GET  /api/url-scans
+POST /api/url-scan/:scanId/refresh
+```
+
+All `/api/*` endpoints must require the existing `x-api-key` authentication.
+
+---
+
+## Endpoint Responsibilities
+
+### 1. `POST /api/url-scan/import`
+
+Purpose:
+
+Import a completed Cloudflare-style scanner JSON result.
+
+This endpoint is for already-completed scan output.
+
+It should accept either wrapped payload:
+
+```json
+{
+  "sourceProvider": "cloudflare",
+  "scan": {}
+}
+```
+
+or raw scanner JSON directly:
+
+```json
+{
+  "data": {},
+  "stats": {},
+  "task": {},
+  "page": {},
+  "verdicts": {}
+}
+```
+
+Behavior:
+
+1. Validate API key.
+2. Accept full JSON body.
+3. Detect wrapped vs raw payload.
+4. Save full scan object to `url_scans.raw_scan_json`.
+5. Extract lightweight index fields.
+6. Build a preliminary `summary_json`.
+7. Optionally insert normalized request rows into `url_scan_requests`.
+8. Return local `scanId`.
+
+Do not mutate or reduce the raw scan object before storing it.
+
+---
+
+### 2. `POST /api/url-scan`
+
+Purpose:
+
+Create a new URL scan request.
+
+Initial provider support:
+
+```text
+provider = cloudflare
+```
+
+Optional future provider:
+
+```text
+provider = internal
+```
+
+Request example:
+
+```json
+{
+  "url": "https://www.cloudflare.com",
+  "provider": "cloudflare",
+  "waitForResult": false
+}
+```
+
+Behavior for `provider = cloudflare`:
+
+1. Validate URL using existing secure URL validation.
+2. Create a local `url_scans` row with status `submitted`.
+3. Submit the URL to Cloudflare URL Scanner using server-side bearer token.
+4. Store Cloudflare submission response in `provider_submission_json`.
+5. Store Cloudflare provider scan ID in `source_scan_id`.
+6. If `waitForResult = false`, return local `scanId` and provider scan ID.
+7. If `waitForResult = true`, include polling implementation but do not require live testing in this task.
+8. When final result is retrieved, store full final result in `raw_scan_json`.
+
+Important:
+
+The Cloudflare bearer token is server-side only.
+
+Clients and agents should never provide the Cloudflare token.
+
+They call `seo-api` using the normal `x-api-key`.
+
+---
+
+### 3. `GET /api/url-scan/:scanId`
+
+Purpose:
+
+Retrieve a stored URL scan.
+
+Default response should be compact and should not include the full raw scan unless requested.
+
+Support query params:
+
+```text
+includeRaw=true
+includeRequests=true
+```
+
+Default response:
+
+```json
+{
+  "success": true,
+  "scan": {
+    "scanId": "uuid",
+    "sourceProvider": "cloudflare",
+    "sourceScanId": "provider-scan-id",
+    "targetUrl": "https://www.staynownow.com/",
+    "domain": "www.staynownow.com",
+    "apexDomain": "staynownow.com",
+    "status": "completed",
+    "summary": {}
+  }
+}
+```
+
+With `includeRaw=true`, include:
+
+```json
+{
+  "rawScan": {}
+}
+```
+
+With `includeRequests=true`, include normalized request rows if implemented.
+
+---
+
+### 4. `GET /api/url-scans`
+
+Purpose:
+
+List stored URL scans.
+
+Support query params:
+
+```text
+domain
+apexDomain
+sourceProvider
+limit
+offset
+```
+
+Return compact summaries only.
+
+Do not return full raw payloads from list endpoint.
+
+---
+
+### 5. `POST /api/url-scan/:scanId/refresh`
+
+Purpose:
+
+For Cloudflare-submitted scans, retrieve the final result after initial submission.
+
+Behavior:
+
+1. Validate API key.
+2. Look up local scan.
+3. Confirm `source_provider = 'cloudflare'`.
+4. Confirm `source_scan_id` exists.
+5. Call Cloudflare result endpoint using server-side bearer token.
+6. Store full final result in `raw_scan_json`.
+7. Rebuild `summary_json`.
+8. Update status/timestamps.
+9. Return compact result.
+
+Implementation is required.
+
+Live testing is not required in this task.
+
+---
+
+## Cloudflare API Authentication
+
+Add support for these environment variables:
+
+```env
+CLOUDFLARE_ACCOUNT_ID=
+CLOUDFLARE_URLSCANNER_API_TOKEN=
+CLOUDFLARE_URLSCANNER_BASE_URL=https://api.cloudflare.com/client/v4
+CLOUDFLARE_URLSCANNER_SCAN_PATH=/accounts/{accountId}/urlscanner/v2/scan
+CLOUDFLARE_URLSCANNER_RESULT_PATH=/accounts/{accountId}/urlscanner/v2/result/{scanId}
+CLOUDFLARE_URLSCANNER_POLL_INTERVAL_MS=3000
+CLOUDFLARE_URLSCANNER_POLL_TIMEOUT_MS=60000
+```
+
+The article example uses:
 
 ```bash
 curl --request POST \
@@ -27,126 +369,462 @@ curl --request POST \
   }'
 ```
 
-The `seo-api` implementation must support this credentialed Cloudflare API flow.
-
----
-
-## Cloudflare API Authentication Requirement [COMPLETED]
-
-Cloudflare URL Scanner API calls require a bearer token.
-
-Add support for:
-
-```env
-CLOUDFLARE_ACCOUNT_ID=
-CLOUDFLARE_URLSCANNER_API_TOKEN=
-```
-
-Optional:
-
-```env
-CLOUDFLARE_URLSCANNER_BASE_URL=https://api.cloudflare.com/client/v4
-```
-
-Do not expose these values through API responses, logs, MCP tool output, OpenAPI examples, or error payloads.
-
----
-
-## Cloudflare Token Permission [COMPLETED]
-
-Create a Cloudflare API token with URL Scanner permissions.
-
-Required permission:
-
-```text
-Account > URL Scanner > Edit
-```
-
-The token should be scoped to the Cloudflare account used for URL Scanner access.
-
-Do not use a global API key.
-
----
-
-## Endpoint Version Note
-
-Cloudflare examples may show more than one URL Scanner path depending on article date or API version.
-
-Known examples include:
+The implementation should support configurable Cloudflare paths because Cloudflare examples may vary between:
 
 ```text
 /accounts/{accountId}/urlscanner/scan
 /accounts/{accountId}/urlscanner/v2/scan
 ```
 
-The implementation should centralize this path in one client module so it can be changed easily.
+Default to the v2 path, but allow `.env` override.
 
-Preferred default:
+---
+
+## Cloudflare Token Permissions
+
+Document that the Cloudflare API token should be scoped to the account and should have:
 
 ```text
-/accounts/{accountId}/urlscanner/v2/scan
+Account > URL Scanner > Edit
 ```
 
-But allow override through environment variable if needed:
+Do not use a global Cloudflare API key.
 
-```env
-CLOUDFLARE_URLSCANNER_SCAN_PATH=/accounts/{accountId}/urlscanner/v2/scan
-```
-
-Also support result retrieval path:
-
-```env
-CLOUDFLARE_URLSCANNER_RESULT_PATH=/accounts/{accountId}/urlscanner/v2/result/{scanId}
-```
-
----
-
-## Required New Capability
-
-Add live Cloudflare URL Scanner provider support.
-
-New flow:
+Do not expose token values in:
 
 ```text
-POST /api/url-scan
-  provider: "cloudflare"
-  url: "https://example.com"
-
-seo-api
-  ↓
-calls Cloudflare URL Scanner API with bearer token
-  ↓
-receives Cloudflare scan ID / response
-  ↓
-stores initial provider submission response
-  ↓
-retrieves/polls final scan result when available
-  ↓
-stores complete raw Cloudflare result in raw_scan_json
-  ↓
-returns seo-api scanId + provider scan ID
+API responses
+OpenAPI examples
+README examples
+logs
+MCP tool outputs
+error messages
 ```
 
 ---
 
-## New Environment Variables [COMPLETED]
+## Required Database Tables
 
-Update `.env.example`:
+Use timestamped migration files.
 
-```env
-# Cloudflare URL Scanner
-CLOUDFLARE_ACCOUNT_ID=
-CLOUDFLARE_URLSCANNER_API_TOKEN=
-CLOUDFLARE_URLSCANNER_BASE_URL=https://api.cloudflare.com/client/v4
-CLOUDFLARE_URLSCANNER_SCAN_PATH=/accounts/{accountId}/urlscanner/v2/scan
-CLOUDFLARE_URLSCANNER_RESULT_PATH=/accounts/{accountId}/urlscanner/v2/result/{scanId}
-CLOUDFLARE_URLSCANNER_POLL_INTERVAL_MS=3000
-CLOUDFLARE_URLSCANNER_POLL_TIMEOUT_MS=60000
+Do not manually create tables outside migrations.
+
+Example migration naming pattern:
+
+```text
+<timestamp>_create-url-scans.up.sql
+<timestamp>_create-url-scans.down.sql
+```
+
+Keep timestamp prefixes.
+
+---
+
+## Table: `url_scans`
+
+Create or migrate to this table shape:
+
+```sql
+CREATE TABLE IF NOT EXISTS url_scans (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+
+    source_scan_id TEXT,
+    source_provider TEXT NOT NULL DEFAULT 'internal',
+
+    target_url TEXT NOT NULL,
+    normalized_url TEXT,
+    final_url TEXT,
+    domain TEXT,
+    apex_domain TEXT,
+    path TEXT,
+
+    scan_status TEXT NOT NULL DEFAULT 'completed',
+    scan_method TEXT,
+    scan_source TEXT,
+
+    report_url TEXT,
+    screenshot_url TEXT,
+    dom_url TEXT,
+
+    http_status INTEGER,
+    page_title TEXT,
+    mime_type TEXT,
+    server_name TEXT,
+
+    total_requests INTEGER,
+    failed_request_count INTEGER,
+    blocked_request_count INTEGER,
+    third_party_domain_count INTEGER,
+    third_party_request_count INTEGER,
+
+    total_size_bytes BIGINT,
+    encoded_size_bytes BIGINT,
+
+    malicious BOOLEAN,
+    has_verdicts BOOLEAN,
+
+    provider_submission_json JSONB,
+    provider_status TEXT,
+    provider_error_json JSONB,
+
+    requested_options JSONB NOT NULL DEFAULT '{}'::jsonb,
+
+    summary_json JSONB,
+    raw_scan_json JSONB,
+    error_json JSONB,
+
+    submitted_at TIMESTAMPTZ,
+    result_retrieved_at TIMESTAMPTZ,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    scanned_at TIMESTAMPTZ,
+    completed_at TIMESTAMPTZ
+);
+
+CREATE INDEX IF NOT EXISTS idx_url_scans_domain_created_at
+ON url_scans (domain, created_at DESC);
+
+CREATE INDEX IF NOT EXISTS idx_url_scans_apex_domain_created_at
+ON url_scans (apex_domain, created_at DESC);
+
+CREATE INDEX IF NOT EXISTS idx_url_scans_source_scan_id
+ON url_scans (source_provider, source_scan_id);
+
+CREATE INDEX IF NOT EXISTS idx_url_scans_status
+ON url_scans (scan_status);
+
+CREATE INDEX IF NOT EXISTS idx_url_scans_raw_json_gin
+ON url_scans USING GIN (raw_scan_json);
+
+CREATE INDEX IF NOT EXISTS idx_url_scans_summary_json_gin
+ON url_scans USING GIN (summary_json);
+
+CREATE INDEX IF NOT EXISTS idx_url_scans_provider_submission_json_gin
+ON url_scans USING GIN (provider_submission_json);
+```
+
+Note:
+
+`raw_scan_json` may be nullable for scans that have been submitted but whose final result has not yet been retrieved.
+
+Once a completed result is available, store the full result there.
+
+---
+
+## Optional Table: `url_scan_requests`
+
+Create this table if time allows.
+
+It is useful for benchmarking and querying resource-level behavior.
+
+This table is derived. The source of truth remains `url_scans.raw_scan_json`.
+
+```sql
+CREATE TABLE IF NOT EXISTS url_scan_requests (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+
+    scan_id UUID NOT NULL REFERENCES url_scans(id) ON DELETE CASCADE,
+
+    request_id TEXT,
+    request_uuid TEXT,
+
+    url TEXT NOT NULL,
+    host TEXT,
+    method TEXT,
+    resource_type TEXT,
+    initiator_type TEXT,
+    initiator_host TEXT,
+
+    status INTEGER,
+    status_text TEXT,
+    mime_type TEXT,
+    protocol TEXT,
+    security_state TEXT,
+
+    remote_ip TEXT,
+    remote_port INTEGER,
+    asn TEXT,
+    asn_name TEXT,
+    asn_org TEXT,
+    country TEXT,
+    region TEXT,
+    city TEXT,
+
+    server_name TEXT,
+    content_type TEXT,
+    cache_control TEXT,
+
+    size_bytes BIGINT,
+    encoded_size_bytes BIGINT,
+    data_length_bytes BIGINT,
+
+    is_primary_request BOOLEAN DEFAULT false,
+    is_same_site BOOLEAN,
+    is_third_party BOOLEAN,
+    is_failed BOOLEAN,
+    is_blocked BOOLEAN,
+
+    headers_json JSONB,
+    security_details_json JSONB,
+    raw_request_json JSONB NOT NULL,
+
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_url_scan_requests_scan_id
+ON url_scan_requests (scan_id);
+
+CREATE INDEX IF NOT EXISTS idx_url_scan_requests_host
+ON url_scan_requests (host);
+
+CREATE INDEX IF NOT EXISTS idx_url_scan_requests_status
+ON url_scan_requests (status);
+
+CREATE INDEX IF NOT EXISTS idx_url_scan_requests_resource_type
+ON url_scan_requests (resource_type);
+
+CREATE INDEX IF NOT EXISTS idx_url_scan_requests_is_failed
+ON url_scan_requests (is_failed);
+
+CREATE INDEX IF NOT EXISTS idx_url_scan_requests_is_third_party
+ON url_scan_requests (is_third_party);
+
+CREATE INDEX IF NOT EXISTS idx_url_scan_requests_raw_json_gin
+ON url_scan_requests USING GIN (raw_request_json);
 ```
 
 ---
 
-## New Client Module
+## Required Files
+
+Add or update:
+
+```text
+src/routes/url-scan.routes.js
+src/repositories/url-scan.repository.js
+src/url-scanner/cloudflare-scan-parser.js
+src/url-scanner/cloudflare-urlscanner-client.js
+public/openapi.json
+README.md
+.env.example
+package.json
+migrations/*
+```
+
+If using MCP in this phase and the MCP server already exists, also update:
+
+```text
+src/mcp/server.js
+src/mcp/tools/import-url-scan.tool.js
+src/mcp/tools/get-url-scan.tool.js
+src/mcp/tools/list-url-scans.tool.js
+src/mcp/tools/run-cloudflare-url-scan.tool.js
+src/mcp/tools/refresh-cloudflare-url-scan.tool.js
+```
+
+If MCP server does not exist yet, do not create a half-wired MCP implementation in this task. Document the tool definitions for later instead.
+
+---
+
+## Parser Module
+
+Create:
+
+```text
+src/url-scanner/cloudflare-scan-parser.js
+```
+
+Exports:
+
+```js
+parseCloudflareUrlScan(scanJson);
+extractScanIndexFields(scanJson);
+buildScanSummary(scanJson);
+normalizeScanRequests(scanJson);
+```
+
+Parser rule:
+
+```text
+The original scan JSON must be returned as rawScanJson without field reduction.
+```
+
+Example shape:
+
+```js
+export function parseCloudflareUrlScan(scanJson) {
+  const indexFields = extractScanIndexFields(scanJson);
+  const summary = buildScanSummary(scanJson);
+  const normalizedRequests = normalizeScanRequests(scanJson);
+
+  return {
+    ...indexFields,
+    summary,
+    normalizedRequests,
+    rawScanJson: scanJson,
+  };
+}
+```
+
+---
+
+## Index Field Extraction
+
+Extract these fields if available:
+
+```text
+source_scan_id
+source_provider
+target_url
+normalized_url
+final_url
+domain
+apex_domain
+path
+scan_status
+scan_method
+scan_source
+report_url
+screenshot_url
+dom_url
+http_status
+page_title
+mime_type
+server_name
+total_requests
+failed_request_count
+blocked_request_count
+third_party_domain_count
+third_party_request_count
+total_size_bytes
+encoded_size_bytes
+malicious
+has_verdicts
+```
+
+If unavailable, store `null`.
+
+Optional missing fields must not fail import.
+
+---
+
+## Summary JSON
+
+Build `summary_json` as a convenience layer.
+
+Suggested structure:
+
+```json
+{
+  "page": {},
+  "task": {},
+  "verdicts": {},
+  "resourceStats": [],
+  "serverStats": [],
+  "domainStats": [],
+  "tlsStats": [],
+  "failedRequests": [],
+  "blockedRequests": [],
+  "largestResources": [],
+  "thirdPartyDomains": [],
+  "marketingTags": [],
+  "bookingOrHotelTech": [],
+  "securityHeaderSummary": {},
+  "scanLinks": {}
+}
+```
+
+Do not treat summary as source of truth.
+
+The raw payload remains source of truth.
+
+---
+
+## Classification Rules
+
+### Failed requests
+
+Classify as failed when:
+
+```text
+status >= 400
+```
+
+### Blocked requests
+
+Classify as blocked when:
+
+```text
+status is 401, 403, or 407
+```
+
+Also flag possible CDN/edge blocking when:
+
+```text
+status >= 400
+and server or headers include CloudFront, AmazonS3, Cloudflare, or similar edge/CDN infrastructure
+```
+
+### Third-party requests
+
+Classify as third party when:
+
+```text
+request host is not the primary domain
+and request host is not a subdomain of the primary apex domain
+```
+
+### Booking or hotel technology
+
+Flag domains or technologies containing:
+
+```text
+skipper
+booking
+synxis
+cloudbeds
+siteminder
+travelclick
+ihotelier
+stayntouch
+opera
+tambourine
+book
+reservation
+reservations
+```
+
+### Marketing tags
+
+Flag domains or technologies containing:
+
+```text
+googletagmanager
+google-analytics
+analytics.google
+doubleclick
+facebook
+fbevents
+bing
+clarity
+siteimprove
+termly
+cloudflareinsights
+```
+
+### Large resource thresholds
+
+Flag resources as large when:
+
+```text
+images >= 500 KB
+scripts >= 250 KB
+stylesheets >= 100 KB
+total page size >= 5 MB
+```
+
+---
+
+## Cloudflare Client Module
 
 Create:
 
@@ -154,7 +832,7 @@ Create:
 src/url-scanner/cloudflare-urlscanner-client.js
 ```
 
-Required exports:
+Exports:
 
 ```js
 submitCloudflareUrlScan(payload);
@@ -162,383 +840,54 @@ getCloudflareUrlScanResult(providerScanId);
 pollCloudflareUrlScanResult(providerScanId, options);
 ```
 
-Recommended implementation shape:
+Behavior:
 
-```js
-const BASE_URL =
-  process.env.CLOUDFLARE_URLSCANNER_BASE_URL ||
-  "https://api.cloudflare.com/client/v4";
-
-const ACCOUNT_ID = process.env.CLOUDFLARE_ACCOUNT_ID;
-const API_TOKEN = process.env.CLOUDFLARE_URLSCANNER_API_TOKEN;
-
-const SCAN_PATH_TEMPLATE =
-  process.env.CLOUDFLARE_URLSCANNER_SCAN_PATH ||
-  "/accounts/{accountId}/urlscanner/v2/scan";
-
-const RESULT_PATH_TEMPLATE =
-  process.env.CLOUDFLARE_URLSCANNER_RESULT_PATH ||
-  "/accounts/{accountId}/urlscanner/v2/result/{scanId}";
-
-function requireCloudflareConfig() {
-  if (!ACCOUNT_ID) {
-    throw new Error("CLOUDFLARE_ACCOUNT_ID is not configured");
-  }
-
-  if (!API_TOKEN) {
-    throw new Error("CLOUDFLARE_URLSCANNER_API_TOKEN is not configured");
-  }
-}
-
-function buildPath(template, values) {
-  return template
-    .replace("{accountId}", encodeURIComponent(values.accountId))
-    .replace("{scanId}", encodeURIComponent(values.scanId || ""));
-}
-
-async function cloudflareRequest(path, options = {}) {
-  requireCloudflareConfig();
-
-  const url = new URL(path, BASE_URL);
-
-  const response = await fetch(url, {
-    ...options,
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${API_TOKEN}`,
-      ...(options.headers || {}),
-    },
-  });
-
-  const body = await response.json().catch(() => null);
-
-  if (!response.ok || body?.success === false) {
-    return {
-      success: false,
-      statusCode: response.status,
-      error: "Cloudflare URL Scanner request failed",
-      details: body,
-    };
-  }
-
-  return body;
-}
-
-export async function submitCloudflareUrlScan(payload) {
-  const path = buildPath(SCAN_PATH_TEMPLATE, {
-    accountId: ACCOUNT_ID,
-  });
-
-  return cloudflareRequest(path, {
-    method: "POST",
-    body: JSON.stringify(payload),
-  });
-}
-
-export async function getCloudflareUrlScanResult(providerScanId) {
-  const path = buildPath(RESULT_PATH_TEMPLATE, {
-    accountId: ACCOUNT_ID,
-    scanId: providerScanId,
-  });
-
-  return cloudflareRequest(path, {
-    method: "GET",
-  });
-}
-
-export async function pollCloudflareUrlScanResult(
-  providerScanId,
-  options = {},
-) {
-  const intervalMs =
-    Number(options.intervalMs) ||
-    Number(process.env.CLOUDFLARE_URLSCANNER_POLL_INTERVAL_MS) ||
-    3000;
-
-  const timeoutMs =
-    Number(options.timeoutMs) ||
-    Number(process.env.CLOUDFLARE_URLSCANNER_POLL_TIMEOUT_MS) ||
-    60000;
-
-  const startedAt = Date.now();
-
-  while (Date.now() - startedAt < timeoutMs) {
-    const result = await getCloudflareUrlScanResult(providerScanId);
-
-    if (result?.success === false) {
-      return result;
-    }
-
-    const status =
-      result?.result?.task?.status ||
-      result?.task?.status ||
-      result?.result?.status ||
-      result?.status;
-
-    if (status === "finished" || status === "completed") {
-      return result;
-    }
-
-    await new Promise((resolve) => setTimeout(resolve, intervalMs));
-  }
-
-  return {
-    success: false,
-    error: "Cloudflare URL Scanner result polling timed out",
-    providerScanId,
-  };
-}
-```
-
-Important:
-
-- Do not log `API_TOKEN`.
-- Do not return `API_TOKEN`.
-- Keep Cloudflare paths configurable because API examples may differ by version.
+- Read Cloudflare account ID from `CLOUDFLARE_ACCOUNT_ID`
+- Read bearer token from `CLOUDFLARE_URLSCANNER_API_TOKEN`
+- Use `Authorization: Bearer <token>`
+- Use configurable endpoint paths
+- Return structured errors
+- Do not expose secrets
 
 ---
 
-## New REST Endpoint Behavior
+## Repository Module
 
-Update:
-
-```http
-POST /api/url-scan
-```
-
-Request body:
-
-```json
-{
-  "url": "https://www.cloudflare.com",
-  "provider": "cloudflare",
-  "visibility": "unlisted",
-  "waitForResult": true
-}
-```
-
-Required fields:
-
-```text
-url
-```
-
-Optional fields:
-
-```text
-provider
-visibility
-waitForResult
-customHeaders
-country
-```
-
-Default:
-
-```json
-{
-  "provider": "internal",
-  "waitForResult": false
-}
-```
-
-When `provider = "cloudflare"`:
-
-1. Validate URL using existing secure URL validator.
-2. Create local `url_scans` row with `source_provider = 'cloudflare'` and `scan_status = 'submitted'`.
-3. Submit to Cloudflare URL Scanner API with bearer token.
-4. Store Cloudflare submission response in `provider_submission_json`.
-5. Extract Cloudflare provider scan ID.
-6. If `waitForResult = false`, return local `scanId` and provider scan ID.
-7. If `waitForResult = true`, poll Cloudflare result endpoint.
-8. Store full final Cloudflare result in `raw_scan_json`.
-9. Parse summary fields from final result.
-10. Return compact summary.
-
----
-
-## Database Schema Additions
-
-Update `url_scans` table to support live provider submissions.
-
-If `url_scans` already exists, create a new migration.
-
-Add columns:
-
-```sql
-ALTER TABLE url_scans
-ADD COLUMN IF NOT EXISTS provider_submission_json JSONB;
-
-ALTER TABLE url_scans
-ADD COLUMN IF NOT EXISTS provider_status TEXT;
-
-ALTER TABLE url_scans
-ADD COLUMN IF NOT EXISTS provider_error_json JSONB;
-
-ALTER TABLE url_scans
-ADD COLUMN IF NOT EXISTS submitted_at TIMESTAMPTZ;
-
-ALTER TABLE url_scans
-ADD COLUMN IF NOT EXISTS result_retrieved_at TIMESTAMPTZ;
-```
-
-If creating `url_scans` fresh, include these columns from the start:
-
-```sql
-provider_submission_json JSONB,
-provider_status TEXT,
-provider_error_json JSONB,
-submitted_at TIMESTAMPTZ,
-result_retrieved_at TIMESTAMPTZ
-```
-
----
-
-## Repository Updates
-
-Update:
+Create or update:
 
 ```text
 src/repositories/url-scan.repository.js
 ```
 
-Add exports:
+Exports:
 
 ```js
+createUrlScanFromParsedScan(parsed);
 createCloudflareScanSubmissionStart(payload);
 markCloudflareScanSubmitted(scanId, payload);
 completeCloudflareScanFromResult(scanId, parsed);
 failCloudflareScan(scanId, errorPayload);
+getUrlScanById(scanId, options);
+listUrlScans(filters);
+insertUrlScanRequests(scanId, normalizedRequests);
 ```
 
-Required stored values:
-
-```text
-local scan id
-provider scan id
-provider submission response
-provider final result
-provider status
-error JSON if failure
-timestamps
-```
+Use transactions when inserting a scan and optional request rows.
 
 ---
 
-## Response Shapes
+## Route Registration
 
-### `POST /api/url-scan` with `waitForResult = false`
-
-```json
-{
-  "success": true,
-  "scanId": "local-uuid",
-  "sourceProvider": "cloudflare",
-  "providerScanId": "cloudflare-scan-id",
-  "status": "submitted",
-  "message": "Cloudflare URL scan submitted. Retrieve the final result later."
-}
-```
-
-### `POST /api/url-scan` with `waitForResult = true`
-
-```json
-{
-  "success": true,
-  "scanId": "local-uuid",
-  "sourceProvider": "cloudflare",
-  "providerScanId": "cloudflare-scan-id",
-  "status": "completed",
-  "summary": {},
-  "result": {}
-}
-```
-
-### Cloudflare auth/config failure
-
-```json
-{
-  "success": false,
-  "error": "Cloudflare URL Scanner is not configured",
-  "message": "Missing CLOUDFLARE_ACCOUNT_ID or CLOUDFLARE_URLSCANNER_API_TOKEN"
-}
-```
-
-Do not expose token values.
-
----
-
-## New Retrieval Behavior
-
-Update:
-
-```http
-GET /api/url-scan/:scanId
-```
-
-If a scan was submitted to Cloudflare but final result is not stored yet, optionally support:
-
-```http
-POST /api/url-scan/:scanId/refresh
-```
-
-This endpoint should:
-
-1. Look up the local scan.
-2. Confirm `source_provider = 'cloudflare'`.
-3. Confirm `source_scan_id` exists.
-4. Fetch the final result from Cloudflare.
-5. Store full result in `raw_scan_json`.
-6. Update status and summary.
-7. Return updated scan.
-
-Add endpoint:
-
-```http
-POST /api/url-scan/:scanId/refresh
-```
-
-Operation ID:
-
-```text
-refreshUrlScanResult
-```
-
----
-
-## Cloudflare Submission Payload
-
-Start with minimal payload:
-
-```json
-{
-  "url": "https://www.cloudflare.com"
-}
-```
-
-Allow optional fields only if Cloudflare API supports them in the current version.
-
-Suggested wrapper from `seo-api` request to Cloudflare request:
+Update `src/index.js` to mount the route if needed:
 
 ```js
-const cloudflarePayload = {
-  url: validatedUrl,
-};
+import urlScanRoutes from "./routes/url-scan.routes.js";
 
-if (visibility) {
-  cloudflarePayload.visibility = visibility;
-}
-
-if (customHeaders) {
-  cloudflarePayload.customHeaders = customHeaders;
-}
-
-if (country) {
-  cloudflarePayload.country = country;
-}
+app.use("/api", requireApiKey, auditRoutes);
+app.use("/api", requireApiKey, urlScanRoutes);
 ```
 
-If optional fields are rejected by Cloudflare, fall back to minimal payload in this phase.
+If current route mounting is structured differently, follow the existing project convention.
 
 ---
 
@@ -553,100 +902,110 @@ public/openapi.json
 Add or update:
 
 ```text
-POST /api/url-scan
 POST /api/url-scan/import
+POST /api/url-scan
 GET /api/url-scan/{scanId}
 GET /api/url-scans
 POST /api/url-scan/{scanId}/refresh
 ```
 
-Add fields to `POST /api/url-scan` request schema:
+Operation IDs:
 
 ```text
-url
-provider
-visibility
-waitForResult
-country
-customHeaders
+importUrlScan
+runUrlScan
+getUrlScan
+listUrlScans
+refreshUrlScanResult
 ```
 
-Make it clear:
+Document:
 
-```text
-provider = internal | cloudflare
-```
-
-All `/api/*` endpoints require `x-api-key`.
-
-Cloudflare bearer token is never supplied by the client. It is server-side only through environment variables.
+- `includeRaw`
+- `includeRequests`
+- `provider = cloudflare`
+- `waitForResult`
+- `x-api-key` required for `/api/*`
+- Cloudflare token is server-side only
 
 ---
 
-## MCP Updates
+## MCP Notes
 
-Add MCP tool after REST endpoint works:
+If the MCP server is already implemented at:
 
 ```text
+src/mcp/server.js
+```
+
+then add tools:
+
+```text
+import_url_scan
+get_url_scan
+list_url_scans
 run_cloudflare_url_scan
 refresh_cloudflare_url_scan
 ```
 
-### `run_cloudflare_url_scan`
+If MCP is not implemented yet, do not block this task.
 
-Description:
+Document these as future MCP tools.
 
-```text
-Submit a URL to Cloudflare URL Scanner through seo-api. Returns a local seo-api scanId and Cloudflare provider scan ID. Can optionally wait for the final result and store the complete raw Cloudflare output.
-```
-
-Input:
-
-```json
-{
-  "url": "https://www.cloudflare.com",
-  "waitForResult": true
-}
-```
-
-### `refresh_cloudflare_url_scan`
-
-Description:
+Canonical MCP path:
 
 ```text
-Refresh a previously submitted Cloudflare URL scan by retrieving the final result from Cloudflare and storing the complete raw output in seo-api.
+src/mcp/server.js
 ```
 
-Input:
+Canonical package script:
 
 ```json
-{
-  "scanId": "local-uuid"
-}
+"start:mcp": "node src/mcp/server.js"
 ```
+
+Do not use:
+
+```text
+mcp/server.js
+```
+
+unless the project has intentionally chosen that structure.
 
 ---
 
 ## README Updates
 
-Add section:
+Add a section:
 
 ```md
-## Cloudflare URL Scanner Live API
+## URL Scanner
 ```
 
 Include:
 
-- Required Cloudflare account ID
-- Required Cloudflare API token
-- Required token permission
-- Environment variables
-- Submit endpoint
+- What the scanner does
+- How it differs from `/api/audit`
+- Raw output preservation policy
+- Import endpoint
+- Cloudflare live provider endpoint
+- Retrieval endpoint
+- History endpoint
 - Refresh endpoint
-- Raw result storage
+- Required environment variables
+- Cloudflare token permission
 - Example curl commands
 
-Example:
+Example import:
+
+```bash
+curl -X POST https://seo-api.revrebel.io/api/url-scan/import \
+  -H "Content-Type: application/json" \
+  -H "x-api-key: YOUR_SEO_API_KEY" \
+  --data-binary @scan-output.json
+```
+
+Example live Cloudflare submission through `seo-api`:
 
 ```bash
 curl -X POST https://seo-api.revrebel.io/api/url-scan \
@@ -655,51 +1014,145 @@ curl -X POST https://seo-api.revrebel.io/api/url-scan \
   -d '{
     "url": "https://www.cloudflare.com",
     "provider": "cloudflare",
-    "waitForResult": true
+    "waitForResult": false
   }'
 ```
 
-Clarify:
+Example retrieval:
+
+```bash
+curl https://seo-api.revrebel.io/api/url-scan/YOUR_SCAN_ID \
+  -H "x-api-key: YOUR_SEO_API_KEY"
+```
+
+Example raw retrieval:
+
+```bash
+curl "https://seo-api.revrebel.io/api/url-scan/YOUR_SCAN_ID?includeRaw=true" \
+  -H "x-api-key: YOUR_SEO_API_KEY"
+```
+
+Example refresh:
+
+```bash
+curl -X POST https://seo-api.revrebel.io/api/url-scan/YOUR_SCAN_ID/refresh \
+  -H "x-api-key: YOUR_SEO_API_KEY"
+```
+
+---
+
+## What Gemini Should Not Do
+
+Do not require Gemini to:
+
+- Verify real Cloudflare credentials
+- Submit real scans to Cloudflare
+- Poll real Cloudflare results
+- Test production `https://seo-api.revrebel.io`
+- Validate DNS/Nginx/PM2 behavior
+- Run live curl tests against external APIs
+
+Those will be handled later in a separate Codex testing task.
+
+Gemini should still write code that is testable and document the commands that Codex/manual testing should run later.
+
+---
+
+## Implementation Validation Gemini Can Do
+
+Gemini may perform non-live checks such as:
+
+```bash
+node --check src/routes/url-scan.routes.js
+node --check src/repositories/url-scan.repository.js
+node --check src/url-scanner/cloudflare-scan-parser.js
+node --check src/url-scanner/cloudflare-urlscanner-client.js
+```
+
+Gemini may also add parser unit tests using fixture JSON if the project already has a test setup.
+
+If no test framework exists, Gemini should document manual parser checks but should not add a heavy testing framework unless needed.
+
+---
+
+## Deferred Codex Testing Task
+
+A later Codex task should test:
 
 ```text
-The client calls seo-api with x-api-key.
-seo-api calls Cloudflare with Authorization: Bearer CLOUDFLARE_URLSCANNER_API_TOKEN.
-The Cloudflare token is never sent to external clients or agents.
+Cloudflare token works
+Cloudflare scan submit endpoint works
+Cloudflare result endpoint path is correct
+waitForResult behavior works
+refresh behavior works
+raw_scan_json is populated from live Cloudflare result
+production seo-api endpoint works
+MCP tool calls work
+Nginx routing works
+PM2 process health works
 ```
+
+Do not include those as acceptance criteria for this Gemini implementation task.
 
 ---
 
 ## Acceptance Criteria
 
-This addendum is complete when:
+This implementation task is complete when:
 
-1. `.env.example` includes Cloudflare URL Scanner variables.
-2. Cloudflare bearer token is read only from server environment variables.
-3. `cloudflare-urlscanner-client.js` exists.
-4. Direct Cloudflare submission works from `seo-api`.
-5. `POST /api/url-scan` supports `provider = cloudflare`.
-6. Submitted Cloudflare scans create local `url_scans` rows.
-7. Cloudflare provider scan ID is stored.
-8. Cloudflare submission response is stored.
-9. Final Cloudflare result can be retrieved/polled.
-10. Full final Cloudflare result is stored in `raw_scan_json`.
-11. `POST /api/url-scan/:scanId/refresh` can retrieve a final result later.
-12. OpenAPI documents the new behavior.
-13. README documents Cloudflare token setup and curl examples.
-14. No Cloudflare token values are logged or returned.
-15. Existing import endpoint still works.
-16. Existing SEO audit endpoint still works.
+1. Migration files exist for `url_scans`.
+2. Optional migration files exist for `url_scan_requests`, if implemented.
+3. `POST /api/url-scan/import` exists.
+4. Import endpoint stores full raw scanner payload.
+5. `POST /api/url-scan` exists.
+6. Cloudflare provider client module exists.
+7. Cloudflare credentials are read from environment variables only.
+8. Cloudflare bearer token is not exposed.
+9. `GET /api/url-scan/:scanId` exists.
+10. `includeRaw=true` behavior is implemented.
+11. `GET /api/url-scans` exists.
+12. `POST /api/url-scan/:scanId/refresh` exists.
+13. Parser preserves unknown fields in `raw_scan_json`.
+14. Parser builds lightweight summary JSON.
+15. OpenAPI documents all scanner endpoints.
+16. README documents scanner setup and deferred testing.
+17. Existing `/api/audit` behavior is not intentionally changed.
+18. Existing Postgres audit persistence is not intentionally changed.
+19. No live external API testing is required from Gemini.
+20. Code syntax checks pass for newly added files.
+
+---
+
+## Non-Goals
+
+Do not build these in this task:
+
+- Final curated reporting structure
+- Dashboard/UI
+- PDF reports
+- Competitor benchmarking
+- Scheduled scans
+- Combined site-health endpoint
+- Final scanner scoring model
+- Production live API testing
+- Codex testing scripts
+- DNS/Nginx/PM2 validation
+- OAuth or Google Workspace agent testing
 
 ---
 
 ## Final Instruction
 
-The previous task captures already-completed scanner JSON.
+Build the scanner capability as a durable raw-output capture system first.
 
-This addendum adds live Cloudflare URL Scanner API submission using:
+Capture everything from the Cloudflare/API result output.
 
-```http
-Authorization: Bearer <API_TOKEN>
-```
+Store it in Postgres.
 
-Keep Cloudflare credentials server-side only. Store the full Cloudflare result output when available. Curate later.
+Extract only lightweight summary/index fields for lookup.
+
+Do not curate away fields.
+
+Do not require Gemini to live-test external APIs.
+
+A separate Codex task will handle live testing later.
