@@ -1,6 +1,6 @@
 ---
 name: postgresql
-description: Use when designing, reviewing, optimizing, troubleshooting, operating, backing up, or securing PostgreSQL 17+ databases. Covers schema design, indexes, query plans, MVCC, VACUUM, WAL, checkpoints, replication, PgBouncer, memory, monitoring, partitioning, backup/recovery, JSONB, arrays, full-text search, RLS, and operational guardrails. Note this is specific to Postgresql 17 or above.
+description: Use when designing, reviewing, optimizing, troubleshooting, operating, backing up, or securing PostgreSQL 17+ databases. Covers schema design, indexes, query plans, MVCC, VACUUM, WAL, checkpoints, replication, PgBouncer, memory, monitoring, partitioning, backup/recovery, JSONB, arrays, full-text search, RLS, and operational guardrails. Note this is specific to PostgreSQL 17 or above.
 license: MIT
 metadata:
   version: "1.0.0"
