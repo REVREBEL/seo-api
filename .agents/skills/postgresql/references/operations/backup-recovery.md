@@ -34,7 +34,7 @@ Logical-only RPO equals backup frequency.
 Use `pg_basebackup` or a proven backup tool for cluster-level physical backups.
 
 ```bash
-pg_basebackup -Ft -z -P -D /backups/base.tar.gz
+pg_basebackup -Ft -z -P -D /backups
 ```
 
 Physical backups require compatible PostgreSQL versions and architectures for restore. They are faster for large clusters and are the foundation for PITR.
