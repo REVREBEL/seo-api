@@ -199,6 +199,10 @@ router.post('/audit', async (req, res) => {
 
 router.get('/audit/:auditId', async (req, res) => {
   const { auditId } = req.params;
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  if (!uuidRegex.test(auditId)) {
+    return res.status(400).json({ success: false, error: 'Invalid auditId format. Must be a valid UUID.' });
+  }
   try {
     const auditRun = await getAuditRunById(auditId);
     if (!auditRun) {
