@@ -18,15 +18,26 @@ async function requestJson(path, options = {}) {
     },
   });
 
+  // Gracefully handle non-JSON or empty responses
   const body = await response.json().catch(() => null);
 
   if (!response.ok) {
     return {
       success: false,
       statusCode: response.status,
-      error: body?.error || "seo-api request failed",
-      message: body?.message || null,
+      error: body?.error || `seo-api request failed with status ${response.status}`,
+      message: body?.message || response.statusText,
       details: body,
+    };
+  }
+
+  // If the request was successful but the body is not valid JSON, treat it as an error.
+  if (body === null) {
+    return {
+      success: false,
+      statusCode: response.status,
+      error: "Invalid JSON response from API",
+      message: "The API returned a successful status but the response body was not valid JSON.",
     };
   }
 
