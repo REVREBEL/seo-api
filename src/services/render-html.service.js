@@ -9,6 +9,7 @@ let browserInstance = null;
 
 const VIEWPORTS = {
   desktop: { width: 1920, height: 1080 },
+  laptop: { width: 1366, height: 768 },
   tablet: { width: 768, height: 1024 },
   mobile: { width: 390, height: 844 }
 };
@@ -54,11 +55,6 @@ function resolveViewport(viewport = 'desktop') {
   return VIEWPORTS[viewport] || VIEWPORTS.desktop;
 }
 
-/**
- * Standard programmatic rendering for simple DOM retrieval requests.
- * @param {string} url - Target URL.
- * @param {Object} [options={}] - Viewport and user-agent options.
- */
 export async function renderHtml(url, options = {}) {
   try {
     const result = await executeBrowserWorkflow(url, options);
@@ -68,7 +64,8 @@ export async function renderHtml(url, options = {}) {
       url: result.finalUrl,
       viewport: result.viewportSize,
       status: result.status,
-      html: result.html
+      html: result.html,
+      browserEvidence: result.browserEvidence
     };
   } catch (error) {
     return {
@@ -79,27 +76,15 @@ export async function renderHtml(url, options = {}) {
   }
 }
 
-/**
- * High-performance lifecycle orchestration wrapper.
- * Supports two call signatures:
- *   executeBrowserWorkflow(url, callback)
- *   executeBrowserWorkflow(url, options, callback)
- *
- * @param {string} url - Destination target.
- * @param {Object|Function} [options={}] - Config options or callback if options omitted.
- * @param {Function} [pageExecutionCallback=null] - Optional page-level task to run before teardown.
- */
 export async function executeBrowserWorkflow(
   url,
   options = {},
   pageExecutionCallback = null
 ) {
-  // Support legacy calling pattern: options omitted, callback passed as second argument
   if (typeof options === 'function') {
     pageExecutionCallback = options;
     options = {};
   } else if (!options || typeof options !== 'object') {
-    // Defensive guard: normalise null, strings, or other primitives to a safe empty object
     options = {};
   }
 
@@ -110,11 +95,27 @@ export async function executeBrowserWorkflow(
   const context = await browser.newContext({
     viewport: viewportSize,
     ignoreHTTPSErrors: true,
-    userAgent
+    userAgent,
+    deviceScaleFactor: options.viewport === 'mobile' ? 2 : 1
   });
 
   try {
     const page = await context.newPage();
+    const consoleErrors = [];
+    const failedRequests = [];
+
+    page.on('console', (msg) => {
+      if (msg.type() === 'error') consoleErrors.push(msg.text());
+    });
+
+    page.on('requestfailed', (request) => {
+      failedRequests.push({
+        url: request.url(),
+        method: request.method(),
+        resourceType: request.resourceType(),
+        failure: request.failure()?.errorText || null
+      });
+    });
 
     const response = await page.goto(url, {
       waitUntil: options.waitUntil || 'networkidle',
@@ -128,6 +129,7 @@ export async function executeBrowserWorkflow(
     const html = await page.content();
     const finalUrl = page.url();
     const status = response?.status() || null;
+    const visualEvidence = await collectVisualEvidence(page, viewportSize);
 
     let callbackData = null;
 
@@ -140,15 +142,66 @@ export async function executeBrowserWorkflow(
       finalUrl,
       status,
       callbackData,
-      viewportSize
+      viewportSize,
+      browserEvidence: {
+        consoleErrors,
+        failedRequests,
+        visual: visualEvidence
+      }
     };
   } catch (error) {
     console.error(`[executeBrowserWorkflow] Navigation error for ${url}:`, error.message);
     throw error;
   } finally {
-    // Context dropped per request; singleton browser process persists
     await context.close();
   }
+}
+
+async function collectVisualEvidence(page, viewportSize) {
+  return await page.evaluate(({ width, height }) => {
+    const h1 = document.querySelector('h1');
+    const h1Box = h1 ? h1.getBoundingClientRect() : null;
+    const ctaSelectors = [
+      "a[href*='book']",
+      "a[href*='reserve']",
+      "a[href*='reservation']",
+      "a[href*='contact']",
+      "button",
+      '.cta',
+      "[class*='cta']"
+    ];
+    const ctaVisible = ctaSelectors.some((selector) => {
+      try {
+        const el = document.querySelector(selector);
+        if (!el) return false;
+        const box = el.getBoundingClientRect();
+        return box.width > 0 && box.height > 0 && box.top < height;
+      } catch {
+        return false;
+      }
+    });
+
+    const hero = document.querySelector('.hero img, [class*="hero"] img, header img, main img');
+    const bodyFontSize = Number.parseFloat(window.getComputedStyle(document.body).fontSize || '0');
+    const viewportMeta = Boolean(document.querySelector('meta[name="viewport"]'));
+
+    return {
+      aboveFold: {
+        h1Visible: Boolean(h1Box && h1Box.width > 0 && h1Box.height > 0 && h1Box.top < height),
+        ctaVisible,
+        heroImage: hero ? hero.getAttribute('src') : null
+      },
+      mobile: {
+        viewportMeta,
+        horizontalScroll: document.documentElement.scrollWidth > window.innerWidth
+      },
+      fonts: {
+        baseSize: bodyFontSize || null,
+        readable: bodyFontSize >= 16
+      },
+      viewport: { width, height }
+    };
+  }, viewportSize);
 }
 
 export async function closeBrowser() {
