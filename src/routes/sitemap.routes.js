@@ -95,7 +95,7 @@ async function collectFullSitemap({
   const errors = [];
   const urlMap = new Map();
 
-  if (looksLikeSitemapUrl(root.href)) {
+  if (looksLikeFeedUrl(root.href)) {
     seedSitemaps.add(root.href);
   } else {
     seedSitemaps.add(`${root.protocol}//${root.host}/sitemap.xml`);
@@ -143,6 +143,7 @@ async function collectFullSitemap({
             lastmod: item.lastmod ? decodeXmlEntity(item.lastmod) : null,
             changefreq: item.changefreq ? decodeXmlEntity(item.changefreq) : null,
             priority: item.priority ? Number(item.priority) : null,
+            sourceType: item.sourceType || 'sitemap',
             sourceSitemap: currentSitemap
           });
         }
@@ -173,7 +174,7 @@ async function collectFullSitemap({
       origin: `${root.protocol}//${root.host}`
     },
     collection: {
-      collectorVersion: 'revrebel-seo-api/sitemap-collector-1.0.0',
+      collectorVersion: 'revrebel-seo-api/sitemap-collector-1.1.0',
       startedAt,
       completedAt: new Date().toISOString(),
       includeRobots,
@@ -203,10 +204,10 @@ async function collectFullSitemap({
   };
 }
 
-function looksLikeSitemapUrl(value) {
+function looksLikeFeedUrl(value) {
   try {
     const parsed = new URL(value);
-    return /sitemap|\.xml(\.gz)?$/i.test(parsed.pathname);
+    return /sitemap|\.xml(\.gz)?$|llms\.txt$/i.test(parsed.pathname);
   } catch {
     return false;
   }
