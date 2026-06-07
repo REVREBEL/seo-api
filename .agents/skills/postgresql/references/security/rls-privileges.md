@@ -39,8 +39,8 @@ CREATE POLICY sensitive_data_user_policy
 ON sensitive_data
 FOR ALL
 TO application_role
-USING (user_id = current_setting('app.current_user_id')::bigint)
-WITH CHECK (user_id = current_setting('app.current_user_id')::bigint);
+USING (user_id = nullif(current_setting('app.current_user_id', true), '')::bigint)
+WITH CHECK (user_id = nullif(current_setting('app.current_user_id', true), '')::bigint);
 ```
 
 Rules:
