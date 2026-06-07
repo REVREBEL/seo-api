@@ -25,3 +25,7 @@ yarn-error.log*
 # .agents/
 
 repo-cache/
+
+# Secrets
+.env
+.env

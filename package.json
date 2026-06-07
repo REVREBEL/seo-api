@@ -1,9 +1,9 @@
 {
-  "name": "revrebel-seo-audit",
+  "name": "seo-api",
   "version": "1.0.0",
   "type": "module",
   "keywords": [],
-  "author": "",
+  "author": "revrebel",
   "license": "ISC",
   "main": "src/index.js",
   "scripts": {
@@ -20,5 +20,8 @@
     "helmet": "^7.1.0",
     "lighthouse": "^12.1.0",
     "playwright": "^1.44.1"
+  },
+  "volta": {
+    "node": "22.22.3"
   }
 }
