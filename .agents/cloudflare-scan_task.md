@@ -59,13 +59,7 @@ The intended project order is:
 4. URL Scanner raw storage and import
 5. Cloudflare live URL Scanner provider scaffolding
 6. MCP wrapper/tool exposure
-7. Codex/API testing task
-8. Curated summaries and benchmarking
 ```
-
-This task covers items 4, 5, and related documentation.
-
-This task does not cover item 7. API testing is deferred.
 
 ---
 
@@ -402,6 +396,23 @@ error messages
 ```
 
 ---
+
+There is no db:migrate:create script in package.json. Do not run it.
+
+Instead:
+
+1. Inspect the existing migrations directory.
+2. Create timestamped migration files manually.
+3. Use the existing naming style:
+   <timestamp>\_create-url-scans.up.sql
+   <timestamp>\_create-url-scans.down.sql
+4. Add the url_scans schema to the .up.sql file.
+5. Add rollback SQL to the .down.sql file.
+6. Do not run migrations against the database in this Gemini task.
+7. Do not add a migration framework unless explicitly assigned as a separate task.
+
+Reason:
+This task is implementation-only. Live DB execution and migration runner setup are deferred.
 
 ## Required Database Tables
 
@@ -1143,16 +1154,7 @@ Do not build these in this task:
 
 ## Final Instruction
 
-Build the scanner capability as a durable raw-output capture system first.
-
+Build the scanner capability as a durable raw-output capture system first
 Capture everything from the Cloudflare/API result output.
-
 Store it in Postgres.
-
 Extract only lightweight summary/index fields for lookup.
-
-Do not curate away fields.
-
-Do not require Gemini to live-test external APIs.
-
-A separate Codex task will handle live testing later.

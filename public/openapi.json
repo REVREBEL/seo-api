@@ -211,15 +211,17 @@
                     }
                 }
             }
-        }
-    },
-    "components": {
-        "securitySchemes": {
-            "ApiKeyAuth": {
-                "type": "apiKey",
-                "in": "header",
-                "name": "x-api-key"
-            }
-        }
-    }
-}
+        },
+        "/api/url-scan/import": {
+            "post": {
+                "operationId": "importUrlScan",
+                "summary": "Import a completed Cloudflare-style scanner JSON result",
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "description": "Accepts either a wrapped payload structure specifying the provider, or the raw complete scanner JSON file object directly.",
+                    "content
