@@ -47,9 +47,12 @@ def reflect_and_refine(task: str, criteria: list[str], max_iterations: int = 3) 
         Evaluate this output against criteria: {criteria}
         Output: {output}
         Rate each: PASS/FAIL with feedback as JSON.
-        """)
-        
-        critique_data = json.loads(critique)
+        """)        
+        try:
+            cleaned = critique.strip().removeprefix("```json").removesuffix("```").strip()
+            critique_data = json.loads(cleaned)
+        except json.JSONDecodeError:
+            continue
         all_pass = all(c["status"] == "PASS" for c in critique_data.values())
         if all_pass:
             return output
@@ -148,7 +151,23 @@ RUBRIC = {
 }
 
 def evaluate_with_rubric(output: str, rubric: dict) -> float:
-    scores = json.loads(llm(f"Rate 1-5 for each dimension: {list(rubric.keys())}\nOutput: {output}"))
+    scores = json.loads(llm(
+            f"Rate 1-5 for each dimension: {list(rubric.keys())}\nOutput: {output}"
+        )
+    )
+    try:
+        cleaned = (
+            llm(f"Rate 1-5 for each dimension: {list(rubric.keys())}\nOutput: {output}")
+            .strip()
+            .removeprefix("```json")
+            .removesuffix("```")
+            .strip()
+        )
+        scores = json.loads(cleaned)
+    except json.JSONDecodeError:
+        scores = {}
+    return sum(scores.get(d, 0) * rubric[d]["weight"] for d in rubric) / 5
+(f"Rate 1-5 for each dimension: {list(rubric.keys())}\nOutput: {output}"))
     return sum(scores[d] * rubric[d]["weight"] for d in rubric) / 5
 ```
 
