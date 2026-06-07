@@ -2,8 +2,8 @@ module.exports = {
   apps: [
     {
       name: 'seo-api',  
-      script: 'src/index.js',  
-      cwd: process.cwd(),
+      script: path.join(__dirname, 'src/index.js'),  
+      cwd: __dirname,
       instances: 1,
       exec_mode: 'fork',
       watch: false,
