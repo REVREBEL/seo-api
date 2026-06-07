@@ -31,7 +31,7 @@ FROM pg_replication_slots
 WHERE restart_lsn IS NOT NULL;
 ```
 
-PostgreSQL 17+ includes `idle_replication_slot_timeout` for invalidating idle slots when configured. Use `max_slot_wal_keep_size` to cap retained WAL per slot.
+PostgreSQL 17+ includes <code>replication_slot_inactive_timeout</code> for invalidating idle slots when configured. Use <code>max_slot_wal_keep_size</code> to cap retained WAL per slot.
 
 Dropping a slot can break downstream replication. Require human confirmation:
 
