@@ -97,9 +97,9 @@ curl http://localhost:3000/openapi.json
 Run a static HTML audit (no browser rendering):
 
 ```bash
-curl -X POST http://localhost:3000/api/audit 
-  -H "Content-Type: application/json" 
-  -H "x-api-key: rebel-default-development-key" 
+curl -X POST http://localhost:3000/api/audit \
+  -H "Content-Type: application/json" \
+  -H "x-api-key: rebel-default-development-key" \
   -d '{"url":"https://example.com","renderMode":"static"}'
 ```
 
