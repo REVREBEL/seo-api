@@ -320,6 +320,19 @@ The MCP server exposes the following tools:
 - `audit_seo_page`: Run a new SEO audit for a URL.
 - `get_audit_run`: Retrieve a prior audit execution by ID.
 - `list_audit_runs`: List recent audit executions.
+- `import_url_scan`: Import a completed raw URL scanner payload and preserve the raw result.
+- `run_url_scan`: Run a new provider-backed URL scanner request.
+- `get_url_scan`: Retrieve a stored URL scanner result by scan ID, optionally including raw payloads and request rows.
+- `list_url_scans`: List stored URL scanner results with compact summaries.
+- `refresh_url_scan_result`: Refresh a provider-backed URL scanner result and store the final raw payload.
+
+The scanner tools wrap the existing REST endpoints:
+
+- `POST /api/url-scan/import`
+- `POST /api/url-scan`
+- `GET /api/url-scan/:scanId`
+- `GET /api/url-scans`
+- `POST /api/url-scan/:scanId/refresh`
 
 ### MCP Inspector Testing
 
@@ -334,6 +347,17 @@ Use the MCP Inspector to test the MCP endpoint and tools.
 2.  **Connect to the MCP endpoint:**
     - **Local:** `http://127.0.0.1:3010/mcp`
     - **Public:** `https://seo-api.revrebel.io/mcp`
+    - If `MCP_SHARED_SECRET` is configured, include the `x-mcp-secret` header.
+
+3.  **Validate the tool list includes all eight tools:**
+    - `audit_seo_page`
+    - `get_audit_run`
+    - `list_audit_runs`
+    - `import_url_scan`
+    - `run_url_scan`
+    - `get_url_scan`
+    - `list_url_scans`
+    - `refresh_url_scan_result`
 
 ### Health Check
 

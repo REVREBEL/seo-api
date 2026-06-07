@@ -215,7 +215,7 @@
         "/api/url-scan/import": {
             "post": {
                 "operationId": "importUrlScan",
-                "summary": "Import a completed Cloudflare-style scanner JSON result",
+                "summary": "Import a completed raw URL scanner payload.",
                 "security": [
                     {
                         "ApiKeyAuth": []
@@ -224,4 +224,226 @@
                 "requestBody": {
                     "required": true,
                     "description": "Accepts either a wrapped payload structure specifying the provider, or the raw complete scanner JSON file object directly.",
-                    "content
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Imported scanner result",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "scanId": {
+                                            "type": "string",
+                                            "format": "uuid"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/url-scan": {
+            "post": {
+                "operationId": "runUrlScan",
+                "summary": "Run a new URL scanner request.",
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "required": [
+                                    "url"
+                                ],
+                                "properties": {
+                                    "url": {
+                                        "type": "string",
+                                        "format": "uri"
+                                    },
+                                    "provider": {
+                                        "type": "string",
+                                        "default": "cloudflare"
+                                    },
+                                    "waitForResult": {
+                                        "type": "boolean",
+                                        "default": false
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "202": {
+                        "description": "Scanner submission accepted"
+                    },
+                    "200": {
+                        "description": "Scanner result returned synchronously"
+                    }
+                }
+            }
+        },
+        "/api/url-scan/{scanId}": {
+            "get": {
+                "operationId": "getUrlScan",
+                "summary": "Retrieve a stored URL scanner result.",
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "parameters": [
+                    {
+                        "name": "scanId",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    },
+                    {
+                        "name": "includeRaw",
+                        "in": "query",
+                        "schema": {
+                            "type": "boolean",
+                            "default": false
+                        }
+                    },
+                    {
+                        "name": "includeRequests",
+                        "in": "query",
+                        "schema": {
+                            "type": "boolean",
+                            "default": false
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "The requested URL scan"
+                    },
+                    "404": {
+                        "description": "URL scan not found"
+                    }
+                }
+            }
+        },
+        "/api/url-scans": {
+            "get": {
+                "operationId": "listUrlScans",
+                "summary": "List stored URL scanner results.",
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "parameters": [
+                    {
+                        "name": "domain",
+                        "in": "query",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "apexDomain",
+                        "in": "query",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "sourceProvider",
+                        "in": "query",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "limit",
+                        "in": "query",
+                        "schema": {
+                            "type": "integer",
+                            "default": 20
+                        }
+                    },
+                    {
+                        "name": "offset",
+                        "in": "query",
+                        "schema": {
+                            "type": "integer",
+                            "default": 0
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "A list of URL scans"
+                    }
+                }
+            }
+        },
+        "/api/url-scan/{scanId}/refresh": {
+            "post": {
+                "operationId": "refreshUrlScanResult",
+                "summary": "Refresh a provider-backed URL scanner result.",
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "parameters": [
+                    {
+                        "name": "scanId",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Refreshed URL scan result"
+                    },
+                    "400": {
+                        "description": "Scan cannot be refreshed"
+                    },
+                    "404": {
+                        "description": "URL scan not found"
+                    }
+                }
+            }
+        }
+    },
+    "components": {
+        "securitySchemes": {
+            "ApiKeyAuth": {
+                "type": "apiKey",
+                "in": "header",
+                "name": "x-api-key"
+            }
+        }
+    }
+}

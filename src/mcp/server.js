@@ -9,13 +9,11 @@ import { isInitializeRequest } from '@modelcontextprotocol/sdk/types.js';
 import { auditSeoPageTool } from './tools/audit-seo-page.tool.js';
 import { getAuditRunTool } from './tools/get-audit-run.tool.js';
 import { listAuditRunsTool } from './tools/list-audit-runs.tool.js';
-
-// URL Scanner Tools
 import { importUrlScanTool } from './tools/import-url-scan.tool.js';
+import { runUrlScanTool } from './tools/run-url-scan.tool.js';
 import { getUrlScanTool } from './tools/get-url-scan.tool.js';
 import { listUrlScansTool } from './tools/list-url-scans.tool.js';
-import { runCloudflareUrlScanTool } from './tools/run-cloudflare-url-scan.tool.js';
-import { refreshCloudflareUrlScanTool } from './tools/refresh-cloudflare-url-scan.tool.js';
+import { refreshUrlScanResultTool } from './tools/refresh-url-scan-result.tool.js';
 
 function createSeoMcpServer() {
   const server = new McpServer({
@@ -28,10 +26,10 @@ function createSeoMcpServer() {
     getAuditRunTool,
     listAuditRunsTool,
     importUrlScanTool,
+    runUrlScanTool,
     getUrlScanTool,
     listUrlScansTool,
-    runCloudflareUrlScanTool,
-    refreshCloudflareUrlScanTool
+    refreshUrlScanResultTool
   ];
 
   for (const tool of tools) {

@@ -6,6 +6,7 @@
  */
 
 import lighthouse from 'lighthouse';
+import { launch } from 'chrome-launcher';
 import { chromium } from 'playwright';
 
 /**
@@ -15,34 +16,23 @@ import { chromium } from 'playwright';
  * @returns {Promise<Object>} Normalized Performance, SEO, and Best Practices metrics.
  */
 export async function runLighthouseAudit(url, options = {}) {
-  // Launch an isolated Playwright browser specifically for this audit.
-  // We use remote-debugging-port=0 to let the OS assign an available port,
-  // which Lighthouse needs to communicate with the browser via CDAP.
-  const browser = await chromium.launch({
-    headless: true,
-    args: [
+  const chrome = await launch({
+    chromePath: chromium.executablePath(),
+    chromeFlags: [
+      '--headless=new',
       '--no-sandbox',
       '--disable-setuid-sandbox',
       '--disable-dev-shm-usage',
-      '--disable-gpu',
-      '--remote-debugging-port=0' 
+      '--disable-gpu'
     ]
   });
 
   try {
-    const wsEndpoint = browser.wsEndpoint();
-    const portMatch = wsEndpoint.match(/:(\d+)\//);
-    const port = portMatch ? parseInt(portMatch[1], 10) : null;
-
-    if (!port) {
-      throw new Error('Failed to extract remote debugging port from Playwright instance.');
-    }
-
     const lhOptions = {
       logLevel: 'error',
       output: 'json',
       onlyCategories: ['performance', 'seo', 'best-practices'],
-      port, // Direct Lighthouse to the Playwright CDAP port
+      port: chrome.port,
       ...options
     };
 
@@ -69,7 +59,7 @@ export async function runLighthouseAudit(url, options = {}) {
     console.error(`[Lighthouse] Audit failed for ${url}:`, error.message);
     throw error;
   } finally {
-    await browser.close();
+    await chrome.kill();
   }
 }
 

@@ -63,7 +63,7 @@ export async function markCloudflareScanSubmitted(scanId, payload) {
     SET source_scan_id = $1, provider_submission_json = $2, provider_status = 'pending'
     WHERE id = $3;
   `;
-    await db.query(query, [payload?.result?.uuid || null, JSON.stringify(payload), scanId]);
+    await db.query(query, [payload?.uuid || payload?.result?.uuid || null, JSON.stringify(payload), scanId]);
 }
 
 export async function completeCloudflareScanFromResult(scanId, parsed) {

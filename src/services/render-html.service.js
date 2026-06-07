@@ -121,6 +121,10 @@ export async function executeBrowserWorkflow(
       timeout: options.timeout || 30000
     });
 
+    if (options.settleTimeMs) {
+      await page.waitForTimeout(options.settleTimeMs);
+    }
+
     const html = await page.content();
     const finalUrl = page.url();
     const status = response?.status() || null;

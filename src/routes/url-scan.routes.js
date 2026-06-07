@@ -56,7 +56,7 @@ router.post('/url-scan', async (req, res, next) => {
             const submissionResponse = await submitCloudflareUrlScan(targetUrl);
             await markCloudflareScanSubmitted(scanId, submissionResponse);
 
-            const providerScanId = submissionResponse?.result?.uuid;
+            const providerScanId = submissionResponse?.uuid || submissionResponse?.result?.uuid;
 
             // Handle Immediate Asynchronous Polling requests if requested
             if (waitForResult === true) {

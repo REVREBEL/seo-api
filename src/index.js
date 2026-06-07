@@ -8,6 +8,7 @@ import express from 'express';
 import helmet from 'helmet';
 import cors from 'cors';
 import auditRouter from './routes/audit.routes.js';
+import urlScanRouter from './routes/url-scan.routes.js';
 import { requireApiKey } from './utils/security.js';
 import { closeBrowser } from './services/render-html.service.js';
 
@@ -36,11 +37,20 @@ app.get('/health', (req, res) => {
 
 // Authenticated analytical paths
 app.use('/api', requireApiKey, auditRouter);
+app.use('/api', requireApiKey, urlScanRouter);
 
 // Global Error Handler for Express 5 native async promise rejections
 app.use((err, req, res, next) => {
   if (res.headersSent) {
     return next(err);
+  }
+
+  if (err instanceof SyntaxError && err.status === 400 && 'body' in err) {
+    return res.status(400).json({
+      success: false,
+      error: 'Invalid JSON request body.',
+      message: 'Check that all property names and string values use straight double quotes.'
+    });
   }
 
   const isProduction = process.env.NODE_ENV === 'production';
