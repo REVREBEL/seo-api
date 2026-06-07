@@ -1,0 +1,22 @@
+# ====================================================================
+# REVREBEL AI CONTEXT FILTER
+# ====================================================================
+
+# 1. Block the dependency graveyard (CRITICAL)
+node_modules/
+
+# 2. Block local version control & metadata
+.git/
+.vscode/
+.projectidx/
+.DS_Store
+
+# 3. Block build artifacts & caches
+dist/
+build/
+npm-debug.log*
+
+# 4. Block hard corporate credentials (LEAVE DEV .ENV UNLISTED)
+production-secrets.json
+*.pem
+*.key
