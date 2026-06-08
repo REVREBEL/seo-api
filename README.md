@@ -13,10 +13,3 @@ The service runs as two PM2 processes:
 ```text
 seo-api      -> main REST API on port 3000
 seo-api-mcp  -> MCP wrapper on port 3010
-```
-
----
-
-## Table of Contents
-
-1. [What
