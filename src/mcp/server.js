@@ -23,6 +23,7 @@ import { refreshUrlScanResultTool } from './tools/refresh-url-scan-result.tool.j
 
 const GEMINI_TOKEN_ISSUER = 'seo-api-gemini-oauth';
 const GEMINI_TOKEN_AUDIENCE = 'seo-api-gemini-mcp';
+const GEMINI_REFRESH_TOKEN_AUDIENCE = 'seo-api-gemini-refresh';
 const geminiAuthCodes = new Map();
 
 function createSeoMcpServer() {
@@ -196,6 +197,81 @@ function verifyToken(token, secret) {
   } catch {
     return null;
   }
+}
+
+function verifyRefreshToken(token, secret) {
+  const parts = String(token || '').split('.');
+
+  if (parts.length !== 3) {
+    return null;
+  }
+
+  const [encodedHeader, encodedPayload, signature] = parts;
+  const expectedSignature = createHmac('sha256', secret)
+    .update(`${encodedHeader}.${encodedPayload}`)
+    .digest('base64url');
+
+  if (!safeCompare(signature, expectedSignature)) {
+    return null;
+  }
+
+  try {
+    const payload = JSON.parse(Buffer.from(encodedPayload, 'base64url').toString('utf8'));
+    const now = Math.floor(Date.now() / 1000);
+
+    if (payload.exp && payload.exp < now) {
+      return null;
+    }
+
+    if (payload.iss !== GEMINI_TOKEN_ISSUER || payload.aud !== GEMINI_REFRESH_TOKEN_AUDIENCE) {
+      return null;
+    }
+
+    return payload;
+  } catch {
+    return null;
+  }
+}
+
+function createGeminiAccessToken({ clientId, scope, secret, ttlSeconds }) {
+  const now = Math.floor(Date.now() / 1000);
+
+  return signToken(
+    {
+      iss: GEMINI_TOKEN_ISSUER,
+      aud: GEMINI_TOKEN_AUDIENCE,
+      sub: clientId,
+      scope,
+      iat: now,
+      exp: now + ttlSeconds,
+      jti: randomUUID()
+    },
+    secret
+  );
+}
+
+function createGeminiRefreshToken({ clientId, scope, secret }) {
+  const now = Math.floor(Date.now() / 1000);
+
+  return signToken(
+    {
+      iss: GEMINI_TOKEN_ISSUER,
+      aud: GEMINI_REFRESH_TOKEN_AUDIENCE,
+      sub: clientId,
+      scope,
+      iat: now,
+      jti: randomUUID()
+    },
+    secret
+  );
+}
+
+function sendOAuthTokenResponse(res, payload) {
+  res.set({
+    'Cache-Control': 'no-store',
+    Pragma: 'no-cache'
+  });
+  res.json(payload);
 }
 
 function getRequestedScopes(scopeInput, allowedScopes) {
@@ -514,11 +590,12 @@ app.post(
     const code = req.body.code;
     const redirectUri = req.body.redirect_uri;
     const codeVerifier = req.body.code_verifier;
+    const refreshToken = req.body.refresh_token;
 
-    if (grantType !== 'authorization_code') {
+    if (!['authorization_code', 'refresh_token'].includes(grantType)) {
       res.status(400).json({
         error: 'unsupported_grant_type',
-        error_description: 'Only authorization_code grant is supported'
+        error_description: 'Only authorization_code and refresh_token grants are supported'
       });
       return;
     }
@@ -527,6 +604,33 @@ app.post(
       res.status(401).json({
         error: 'invalid_client',
         error_description: 'Invalid client credentials'
+      });
+      return;
+    }
+
+    if (grantType === 'refresh_token') {
+      const refreshPayload = verifyRefreshToken(refreshToken, config.tokenSecret);
+
+      if (!refreshPayload || refreshPayload.sub !== clientId) {
+        res.status(400).json({
+          error: 'invalid_grant',
+          error_description: 'Invalid refresh token'
+        });
+        return;
+      }
+
+      const accessToken = createGeminiAccessToken({
+        clientId,
+        scope: refreshPayload.scope,
+        secret: config.tokenSecret,
+        ttlSeconds: config.accessTokenTtlSeconds
+      });
+
+      sendOAuthTokenResponse(res, {
+        access_token: accessToken,
+        token_type: 'Bearer',
+        expires_in: config.accessTokenTtlSeconds,
+        scope: refreshPayload.scope
       });
       return;
     }
@@ -557,22 +661,21 @@ app.post(
       return;
     }
 
-    const now = Math.floor(Date.now() / 1000);
-    const accessToken = signToken(
-      {
-        iss: GEMINI_TOKEN_ISSUER,
-        aud: GEMINI_TOKEN_AUDIENCE,
-        sub: clientId,
-        scope: authCode.scope,
-        iat: now,
-        exp: now + config.accessTokenTtlSeconds,
-        jti: randomUUID()
-      },
-      config.tokenSecret
-    );
+    const accessToken = createGeminiAccessToken({
+      clientId,
+      scope: authCode.scope,
+      secret: config.tokenSecret,
+      ttlSeconds: config.accessTokenTtlSeconds
+    });
+    const issuedRefreshToken = createGeminiRefreshToken({
+      clientId,
+      scope: authCode.scope,
+      secret: config.tokenSecret
+    });
 
-    res.json({
+    sendOAuthTokenResponse(res, {
       access_token: accessToken,
+      refresh_token: issuedRefreshToken,
       token_type: 'Bearer',
       expires_in: config.accessTokenTtlSeconds,
       scope: authCode.scope
