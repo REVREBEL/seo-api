@@ -13,7 +13,7 @@
 
 <p align="right">__REPO__ a project by REVREBEL</p>
 
-# __REPO_UPPER__
+# SEO API
 
 <div align="left">
 	<a href="https://github.com/__OWNER__/__REPO__/issues">
@@ -26,45 +26,6 @@
 
 <br>
 <br>
-
-## **THE PROJECT**
-
-* <!-- ... [WHY DID YOU CREATED THIS PROJECT?, MOTIVATION, PURPOSE, DESCRIPTION, OBJECTIVES, etc] -->
-
-<br>
-<br>
-
-## **INSTALLATION**
-
-* <!-- ... [SHOW HOW YOUR PROJECT IS INSTALLED] -->
-
-
-
-## **USAGE**
-
-* <!-- ... [SHOW HOW YOUR PROJECT IS USED] -->
-
-<br>
-<br>
-
-## **PROJECT TREE**
-
-<!-- ... [SHOW YOUR PROJECT TREE HERE IF USEFUL] -->
-
-<br>
-<br>
-
-## **NOTES**
-
-* <!-- ... [ADD ADDITIONAL NOTES] -->
-
-<br>
-<br>
-
-
-
-
-# SEO-API
 
 ## **THE PROJECT**
 
@@ -112,6 +73,8 @@ npm install
 ```
 
 ---
+<br>
+<br>
 
 ## Install Playwright Browser Dependencies
 
@@ -134,6 +97,8 @@ npm start
 The API will start on `http://localhost:3000`.
 
 ---
+<br>
+<br>
 
 ## Health Check
 
@@ -165,6 +130,8 @@ curl http://localhost:3000/openapi.json
 ```
 
 ---
+<br>
+<br>
 
 ## Static Audit Test
 
