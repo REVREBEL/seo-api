@@ -33,6 +33,6 @@
     "zod-to-json-schema": "^3.25.2"
   },
   "volta": {
-    "node": "22.22.3"
+    "node": "24.16.0"
   }
 }
