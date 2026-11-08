@@ -34,7 +34,8 @@
     "zod": "^4.4.3",
     "zod-to-json-schema": "^3.25.2",
     "@clerk/backend": "3.27.0",
-    "@clerk/mcp-tools": "0.7.0"
+    "@clerk/mcp-tools": "0.7.0",
+    "@clerk/express": "2.1.88"
   },
   "volta": {
     "node": "22.22.3"
