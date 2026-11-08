@@ -36,6 +36,13 @@ jobs:
       - name: Install dependencies
         run: npm install --no-audit --no-fund
 
+      - name: Upload generated package lock
+        uses: actions/upload-artifact@v4
+        with:
+          name: generated-package-lock
+          path: package-lock.json
+          if-no-files-found: error
+
       - name: Syntax check
         run: |
           node --check src/mcp/clerk-auth.js
