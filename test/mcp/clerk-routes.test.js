@@ -105,7 +105,7 @@ test('missing bearer token returns an MCP-compatible OAuth challenge', async () 
     assert.equal(response.status, 401);
     assert.match(
       response.headers.get('www-authenticate') || '',
-      /resource_metadata="https:\/\/clerk\.revrebel\.io\/\.well-known\/oauth-protected-resource\/mcp"/,
+      /resource_metadata="https:\/\/clerk-mcp\.revrebel\.io\/\.well-known\/oauth-protected-resource\/mcp"/,
     );
     assert.match(response.headers.get('www-authenticate') || '', /error="invalid_token"/);
   } finally {
