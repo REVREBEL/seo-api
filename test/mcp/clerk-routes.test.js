@@ -5,9 +5,9 @@ import express from 'express';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { installClerkProtectedMcp } from '../../src/mcp/clerk-mcp.js';
 
-const RESOURCE = 'https://clerk.revrebel.io/mcp';
+const RESOURCE = 'https://clerk-mcp.revrebel.io/mcp';
 const ISSUER = 'https://clerk.revrebel.io';
-const METADATA = 'https://clerk.revrebel.io/.well-known/oauth-protected-resource/mcp';
+const METADATA = 'https://clerk-mcp.revrebel.io/.well-known/oauth-protected-resource/mcp';
 
 async function start(app) {
   const server = app.listen(0, '127.0.0.1');

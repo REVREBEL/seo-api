@@ -7,7 +7,7 @@ import {
   deriveProtectedResourceMetadataUrl,
 } from '../../src/mcp/clerk-auth.js';
 
-const RESOURCE = 'https://clerk.revrebel.io/mcp';
+const RESOURCE = 'https://clerk-mcp.revrebel.io/mcp';
 const ISSUER = 'https://clerk.revrebel.io';
 
 function fakeJwt(payload) {
@@ -43,7 +43,7 @@ const verifiedAuthInfo = {
 test('derives RFC 9728 protected-resource metadata from the exact resource URI', () => {
   assert.equal(
     deriveProtectedResourceMetadataUrl(RESOURCE),
-    'https://clerk.revrebel.io/.well-known/oauth-protected-resource/mcp',
+    'https://clerk-mcp.revrebel.io/.well-known/oauth-protected-resource/mcp',
   );
   assert.equal(
     deriveAuthorizationServerMetadataUrl(ISSUER),
@@ -55,7 +55,7 @@ test('audience matching uses the exact resource URI, not an origin or prefix', (
   assert.equal(audienceContainsExactResource(RESOURCE, RESOURCE), true);
   assert.equal(audienceContainsExactResource([RESOURCE], RESOURCE), true);
   assert.equal(audienceContainsExactResource('https://clerk.revrebel.io', RESOURCE), false);
-  assert.equal(audienceContainsExactResource('https://clerk.revrebel.io/mcp/', RESOURCE), false);
+  assert.equal(audienceContainsExactResource('https://clerk-mcp.revrebel.io/mcp/', RESOURCE), false);
 });
 
 test('accepts a Clerk-verified OAuth JWT with exact issuer, expiry, and audience', async () => {
@@ -80,7 +80,7 @@ test('accepts a Clerk-verified OAuth JWT with exact issuer, expiry, and audience
   assert.equal(authInfo.extra.userId, 'user_test');
   assert.equal(
     authInfo.resourceMetadataUrl,
-    'https://clerk.revrebel.io/.well-known/oauth-protected-resource/mcp',
+    'https://clerk-mcp.revrebel.io/.well-known/oauth-protected-resource/mcp',
   );
 });
 

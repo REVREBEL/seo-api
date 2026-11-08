@@ -311,7 +311,7 @@ The primary `/mcp` endpoint now requires a Clerk OAuth access token. The MCP tra
 Configuration:
 
 ```env
-MCP_RESOURCE_URL=https://clerk.revrebel.io/mcp
+MCP_RESOURCE_URL=https://clerk-mcp.revrebel.io/mcp
 CLERK_ISSUER=https://clerk.revrebel.io
 CLERK_PUBLISHABLE_KEY=pk_live_...
 CLERK_SECRET_KEY=sk_live_...
@@ -322,7 +322,7 @@ Discovery URLs are derived from the configured values:
 
 ```text
 Protected resource metadata:
-https://clerk.revrebel.io/.well-known/oauth-protected-resource/mcp
+https://clerk-mcp.revrebel.io/.well-known/oauth-protected-resource/mcp
 
 Clerk authorization server metadata:
 https://clerk.revrebel.io/.well-known/oauth-authorization-server

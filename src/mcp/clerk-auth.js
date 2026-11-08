@@ -1,7 +1,7 @@
 import { createClerkClient } from '@clerk/backend';
 import { verifyClerkToken } from '@clerk/mcp-tools/server';
 
-export const DEFAULT_MCP_RESOURCE_URL = 'https://clerk.revrebel.io/mcp';
+export const DEFAULT_MCP_RESOURCE_URL = 'https://clerk-mcp.revrebel.io/mcp';
 export const DEFAULT_CLERK_ISSUER = 'https://clerk.revrebel.io';
 
 function trimTrailingSlash(value) {
