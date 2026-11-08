@@ -10,6 +10,7 @@ import {
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import { isInitializeRequest } from '@modelcontextprotocol/sdk/types.js';
+import { installClerkProtectedMcp } from './clerk-mcp.js';
 
 // Core Audit Tools
 import { auditSeoPageTool } from './tools/audit-seo-page.tool.js';
@@ -26,7 +27,7 @@ const GEMINI_TOKEN_AUDIENCE = 'seo-api-gemini-mcp';
 const GEMINI_REFRESH_TOKEN_AUDIENCE = 'seo-api-gemini-refresh';
 const geminiAuthCodes = new Map();
 
-function createSeoMcpServer() {
+export function createSeoMcpServer() {
   const server = new McpServer({
     name: 'seo-api-mcp',
     version: '1.0.0'
@@ -685,27 +686,10 @@ app.post(
 
 const transports = {};
 
-app.post('/mcp', express.json(), async (req, res) => {
-  try {
-    if (!validateMcpSecret(req, res)) {
-      return;
-    }
-
-    await handleMcpRequest({ req, res });
-  } catch (error) {
-    console.error('MCP POST /mcp error:', error);
-
-    if (!res.headersSent) {
-      res.status(500).json({
-        jsonrpc: '2.0',
-        error: {
-          code: -32603,
-          message: 'Internal server error'
-        },
-        id: null
-      });
-    }
-  }
+installClerkProtectedMcp({
+  app,
+  createServer: createSeoMcpServer,
+  additionalAuthorization: async (req, res) => validateMcpSecret(req, res),
 });
 
 app.post('/gemini/mcp', express.json(), async (req, res) => {
@@ -731,22 +715,6 @@ app.post('/gemini/mcp', express.json(), async (req, res) => {
   }
 });
 
-app.get('/mcp', async (req, res) => {
-  try {
-    if (!validateMcpSecret(req, res)) {
-      return;
-    }
-
-    await handleMcpGetOrDelete({ req, res });
-  } catch (error) {
-    console.error('MCP GET /mcp error:', error);
-
-    if (!res.headersSent) {
-      res.status(500).send('Internal server error');
-    }
-  }
-});
-
 app.get('/gemini/mcp', async (req, res) => {
   try {
     if (!validateGeminiBearerToken(req, res)) {
@@ -756,22 +724,6 @@ app.get('/gemini/mcp', async (req, res) => {
     await handleMcpGetOrDelete({ req, res });
   } catch (error) {
     console.error('MCP GET /gemini/mcp error:', error);
-
-    if (!res.headersSent) {
-      res.status(500).send('Internal server error');
-    }
-  }
-});
-
-app.delete('/mcp', async (req, res) => {
-  try {
-    if (!validateMcpSecret(req, res)) {
-      return;
-    }
-
-    await handleMcpGetOrDelete({ req, res });
-  } catch (error) {
-    console.error('MCP DELETE /mcp error:', error);
 
     if (!res.headersSent) {
       res.status(500).send('Internal server error');

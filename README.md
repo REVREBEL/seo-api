@@ -304,6 +304,49 @@ The MCP server acts as a wrapper around the existing REST API.
 
 - **URL:** `https://seo-api.revrebel.io/mcp`
 
+### Clerk OAuth (primary MCP endpoint)
+
+The primary `/mcp` endpoint now requires a Clerk OAuth access token. The MCP transport and tool set are unchanged; the primary route uses stateless Streamable HTTP, creating a fresh MCP server/transport for each request.
+
+Configuration:
+
+```env
+MCP_RESOURCE_URL=https://clerk.revrebel.io/mcp
+CLERK_ISSUER=https://clerk.revrebel.io
+CLERK_PUBLISHABLE_KEY=pk_live_...
+CLERK_SECRET_KEY=sk_live_...
+MCP_OAUTH_SCOPES="profile email"
+```
+
+Discovery URLs are derived from the configured values:
+
+```text
+Protected resource metadata:
+https://clerk.revrebel.io/.well-known/oauth-protected-resource/mcp
+
+Clerk authorization server metadata:
+https://clerk.revrebel.io/.well-known/oauth-authorization-server
+```
+
+The server only accepts Clerk OAuth access tokens for the primary route (`acceptsToken: 'oauth_token'`). Clerk verifies the token cryptographically and validates the exact resource audience. Verified JWTs receive an additional issuer, expiry, and exact-audience check. Opaque tokens are never decoded locally and rely on Clerk's resource-aware verification.
+
+If `MCP_SHARED_SECRET` is configured, it remains an additional authorization gate after Clerk OAuth succeeds.
+
+The legacy `/gemini/mcp` endpoint and its existing Gemini OAuth/session behavior are preserved.
+
+Run the automated tests with:
+
+```bash
+npm run test:mcp
+```
+
+To verify a real token obtained after an interactive Clerk sign-in/consent flow:
+
+```bash
+CLERK_TEST_OAUTH_ACCESS_TOKEN='<oauth access token>' npm run test:mcp:clerk:live
+```
+
+
 ### Environment Variables
 
 The following environment variables are used to configure the MCP server:

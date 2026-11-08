@@ -11,7 +11,9 @@
     "start:mcp": "node src/mcp/server.js",
     "db:migrate": "node-pg-migrate -m db/migrations up",
     "db:rollback": "node-pg-migrate -m db/migrations down",
-    "db:migrate:create": "node-pg-migrate -m db/migrations create"
+    "db:migrate:create": "node-pg-migrate -m db/migrations create",
+    "test:mcp": "node --test test/mcp/*.test.js",
+    "test:mcp:clerk:live": "CLERK_LIVE_TEST=1 node --test test/mcp/clerk-live.test.js"
   },
   "dependencies": {
     "@axe-core/playwright": "^4.9.1",
@@ -30,7 +32,9 @@
     "pg": "^8.21.0",
     "playwright": "^1.44.1",
     "zod": "^4.4.3",
-    "zod-to-json-schema": "^3.25.2"
+    "zod-to-json-schema": "^3.25.2",
+    "@clerk/backend": "3.27.0",
+    "@clerk/mcp-tools": "0.7.0"
   },
   "volta": {
     "node": "22.22.3"
