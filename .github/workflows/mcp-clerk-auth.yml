@@ -19,7 +19,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   test:
@@ -34,7 +34,7 @@ jobs:
           node-version: 22.22.3
 
       - name: Install dependencies
-        run: npm install --no-audit --no-fund
+        run: npm ci --no-audit --no-fund
 
 
       - name: Syntax check
@@ -46,15 +46,3 @@ jobs:
       - name: Test MCP Clerk OAuth
         run: npm run test:mcp
 
-      - name: Commit generated dependency lock
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-        run: |
-          if git diff --quiet -- package-lock.json; then
-            echo "package-lock.json is already current"
-            exit 0
-          fi
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add package-lock.json
-          git commit -m "Refresh MCP Clerk dependency lock"
-          git push
